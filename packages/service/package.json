@@ -1,0 +1,42 @@
+{
+  "name": "@vtx-track/service",
+  "version": "0.1.0",
+  "description": "Install vtx-track as a background service across OSes — Windows Scheduled Task, macOS launchd, Linux systemd user unit.",
+  "keywords": ["vtx-track", "vtx-labs", "service", "daemon", "launchd", "systemd"],
+  "homepage": "https://github.com/VTX-Labs/vtx-track/tree/main/packages/service#readme",
+  "bugs": "https://github.com/VTX-Labs/vtx-track/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/VTX-Labs/vtx-track.git",
+    "directory": "packages/service"
+  },
+  "license": "MIT",
+  "author": "VTX Labs (https://vtxlabs.dev)",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "types": "./dist/index.d.ts",
+  "files": ["dist", "README.md", "LICENSE"],
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "prepublishOnly": "pnpm typecheck && pnpm test && pnpm build"
+  },
+  "dependencies": {
+    "@vtx-track/core": "workspace:*",
+    "@vtx-track/daemon": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.1",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  },
+  "packageManager": "pnpm@10.6.5"
+}

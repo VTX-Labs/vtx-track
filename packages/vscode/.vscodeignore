@@ -1,0 +1,12 @@
+# Keep the .vsix lean: ship only the bundled extension, README, and LICENSE.
+src/**
+test/**
+node_modules/**
+**/*.map
+**/*.ts
+tsconfig.json
+tsup.config.ts
+vitest.config.ts
+.vscodeignore
+pnpm-lock.yaml
+coverage/**

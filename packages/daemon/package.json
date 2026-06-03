@@ -1,0 +1,49 @@
+{
+  "name": "@vtx-track/daemon",
+  "version": "0.1.0",
+  "description": "The vtx-track background daemon: samples activity, owns the timeline, and serves a localhost API + IPC socket. Local-first, headless, no Electron.",
+  "keywords": ["vtx-track", "vtx-labs", "daemon", "time-tracking", "local-first"],
+  "homepage": "https://github.com/VTX-Labs/vtx-track/tree/main/packages/daemon#readme",
+  "bugs": "https://github.com/VTX-Labs/vtx-track/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/VTX-Labs/vtx-track.git",
+    "directory": "packages/daemon"
+  },
+  "license": "MIT",
+  "author": "VTX Labs (https://vtxlabs.dev)",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "vtx-track-daemon": "dist/main.js"
+  },
+  "files": ["dist", "README.md", "LICENSE"],
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsx src/main.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "prepublishOnly": "pnpm typecheck && pnpm test && pnpm build"
+  },
+  "dependencies": {
+    "@vtx-track/core": "workspace:*",
+    "@vtx-track/dashboard": "workspace:*",
+    "@vtx-track/platform": "workspace:*",
+    "@vtx-track/protocol": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.1",
+    "tsup": "^8.3.5",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  },
+  "packageManager": "pnpm@10.6.5"
+}

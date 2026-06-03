@@ -1,0 +1,72 @@
+{
+  "name": "@vtx-track/vscode",
+  "displayName": "vtx-track",
+  "version": "0.1.0",
+  "description": "Enriches the vtx-track daemon's timeline with VS Code context — workspace, git repo/branch, active file, language, and edit/debug/test/terminal mode — plus a status-bar widget. No double-counting: the daemon owns the clock.",
+  "keywords": ["vtx-track", "vtx-labs", "time-tracking", "vscode", "local-first"],
+  "homepage": "https://github.com/VTX-Labs/vtx-track/tree/main/packages/vscode#readme",
+  "bugs": "https://github.com/VTX-Labs/vtx-track/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/VTX-Labs/vtx-track.git",
+    "directory": "packages/vscode"
+  },
+  "license": "MIT",
+  "author": "VTX Labs (https://vtxlabs.dev)",
+  "publisher": "vtx-labs",
+  "main": "./dist/extension.js",
+  "engines": {
+    "vscode": "^1.90.0",
+    "node": ">=20"
+  },
+  "categories": ["Other"],
+  "activationEvents": ["onStartupFinished"],
+  "contributes": {
+    "commands": [
+      {
+        "command": "vtx-track.openDashboard",
+        "title": "vtx-track: Open Dashboard"
+      }
+    ],
+    "configuration": {
+      "title": "vtx-track",
+      "properties": {
+        "vtx-track.daemonUrl": {
+          "type": "string",
+          "default": "http://127.0.0.1:7842",
+          "description": "Base URL of the local vtx-track daemon's HTTP API."
+        },
+        "vtx-track.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Push VS Code context (workspace, repo, branch, file, mode) to the daemon."
+        },
+        "vtx-track.sendFilePaths": {
+          "type": "boolean",
+          "default": true,
+          "description": "Include the active file path (relative to the workspace) in the context sent to the daemon. Disable to keep file names private; language and mode are still sent."
+        }
+      }
+    }
+  },
+  "files": ["dist", "README.md", "LICENSE"],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "package": "vsce package --no-dependencies",
+    "prepublishOnly": "pnpm typecheck && pnpm test && pnpm build"
+  },
+  "dependencies": {
+    "@vtx-track/protocol": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.1",
+    "@types/vscode": "^1.90.0",
+    "@vscode/vsce": "^3.2.1",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  },
+  "packageManager": "pnpm@10.6.5"
+}

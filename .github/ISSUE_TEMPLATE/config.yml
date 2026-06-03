@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security report
+    url: https://github.com/VTX-Labs/vtx-track/security/advisories/new
+    about: Privately report a security or privacy vulnerability (see SECURITY.md).
+  - name: Discussions
+    url: https://github.com/VTX-Labs/vtx-track/discussions
+    about: Questions, ideas, and show-and-tell.

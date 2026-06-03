@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <title>vtx-track · dashboard</title>
+    <link rel="stylesheet" href="./uplot.css" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <span class="wordmark">vtx-track</span>
+        <span class="brand-sub">dashboard</span>
+      </div>
+      <div class="controls">
+        <div class="status" title="Daemon status">
+          <span id="status-dot" class="status-dot" data-kind="ok"></span>
+          <span id="status-text" class="status-text">Connecting…</span>
+        </div>
+        <div class="range-switcher" role="group" aria-label="Date range">
+          <button class="range-btn active" data-range="today">Today</button>
+          <button class="range-btn" data-range="7d">7d</button>
+          <button class="range-btn" data-range="30d">30d</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="content">
+      <div id="offline-banner" class="banner banner-offline" hidden>
+        <strong>Daemon offline.</strong> The vtx-track daemon isn't reachable on
+        this machine. Start it (for example with
+        <code>vtx-track service start</code>) and this page will fill in
+        automatically.
+      </div>
+
+      <div id="wayland-note" class="banner banner-warn" hidden>
+        <strong>Limited on Wayland.</strong> Your compositor's security model
+        hides window titles, so per-window detail is reduced. App and idle
+        tracking still work. See the docs to enable the GNOME/KWin adapter.
+      </div>
+
+      <section class="grid">
+        <div class="panel">
+          <h2>By category</h2>
+          <div id="summary-category" class="panel-body"></div>
+        </div>
+        <div class="panel">
+          <h2>By app</h2>
+          <div id="summary-app" class="panel-body"></div>
+        </div>
+      </section>
+
+      <section class="panel panel-wide">
+        <h2>Timeline</h2>
+        <div id="timeline-chart" class="panel-body chart"></div>
+      </section>
+
+      <section class="panel panel-wide">
+        <h2>Focus</h2>
+        <div id="focus-cards" class="panel-body cards"></div>
+      </section>
+
+      <section class="grid">
+        <div class="panel">
+          <h2>Top projects</h2>
+          <div id="summary-project" class="panel-body"></div>
+        </div>
+        <div class="panel">
+          <h2>Top languages</h2>
+          <div id="summary-language" class="panel-body"></div>
+        </div>
+      </section>
+
+      <section class="panel panel-wide">
+        <h2>Standup preview</h2>
+        <div id="standup-preview" class="panel-body"></div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      Local-first · nothing leaves your machine. Built by
+      <a href="https://vtxlabs.dev">VTX Labs</a>.
+    </footer>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>

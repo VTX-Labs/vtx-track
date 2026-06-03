@@ -1,0 +1,29 @@
+name: Feature request
+description: Suggest an improvement or a new capability.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+      description: Lead with the need, not the implementation.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+    validations:
+      required: true
+  - type: checkboxes
+    id: principles
+    attributes:
+      label: Fits vtx-track's principles
+      description: vtx-track is local-first and privacy-first by design.
+      options:
+        - label: This keeps data local by default (no required cloud / telemetry).
+        - label: This doesn't add a heavy runtime (no Electron, minimal deps).
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered

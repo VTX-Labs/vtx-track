@@ -1,0 +1,22 @@
+node_modules/
+dist/
+out/
+coverage/
+*.log
+.DS_Store
+
+# Generated API docs (built fresh in CI, published to GitHub Pages).
+docs/
+
+# VS Code extension build artifacts.
+*.vsix
+
+# Local tracking data — never commit a real database or export.
+*.db
+*.db-shm
+*.db-wal
+.vtx-track/
+
+# Env / secrets.
+.env*
+!.env.example

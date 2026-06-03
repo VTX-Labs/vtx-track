@@ -1,0 +1,46 @@
+{
+  "name": "@vtx-track/sync",
+  "version": "0.1.0",
+  "description": "Optional self-hosted, end-to-end-encrypted sync for vtx-track — merge your timeline across machines without a third-party cloud.",
+  "keywords": ["vtx-track", "vtx-labs", "sync", "self-hosted", "e2ee"],
+  "homepage": "https://github.com/VTX-Labs/vtx-track/tree/main/packages/sync#readme",
+  "bugs": "https://github.com/VTX-Labs/vtx-track/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/VTX-Labs/vtx-track.git",
+    "directory": "packages/sync"
+  },
+  "license": "MIT",
+  "author": "VTX Labs (https://vtxlabs.dev)",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "vtx-track-sync-server": "dist/server-main.js"
+  },
+  "files": ["dist", "README.md", "LICENSE"],
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsx src/server-main.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "prepublishOnly": "pnpm typecheck && pnpm test && pnpm build"
+  },
+  "dependencies": {
+    "@vtx-track/protocol": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.1",
+    "tsup": "^8.3.5",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  },
+  "packageManager": "pnpm@10.6.5"
+}

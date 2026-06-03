@@ -1,0 +1,42 @@
+{
+  "name": "@vtx-track/cli",
+  "version": "0.1.0",
+  "description": "The vtx-track command line: start the tracker, see today/this-week, per-project and per-language time, standups, timesheets, and export — all local.",
+  "keywords": ["vtx-track", "vtx-labs", "time-tracking", "cli", "local-first"],
+  "homepage": "https://github.com/VTX-Labs/vtx-track/tree/main/packages/cli#readme",
+  "bugs": "https://github.com/VTX-Labs/vtx-track/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/VTX-Labs/vtx-track.git",
+    "directory": "packages/cli"
+  },
+  "license": "MIT",
+  "author": "VTX Labs (https://vtxlabs.dev)",
+  "type": "module",
+  "bin": {
+    "vtx-track": "dist/cli.js",
+    "vtt": "dist/cli.js"
+  },
+  "files": ["dist", "README.md", "LICENSE"],
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsx src/cli.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "prepublishOnly": "pnpm typecheck && pnpm test && pnpm build"
+  },
+  "dependencies": {
+    "@vtx-track/core": "workspace:*",
+    "@vtx-track/protocol": "workspace:*",
+    "@vtx-track/service": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.1",
+    "tsup": "^8.3.5",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  },
+  "packageManager": "pnpm@10.6.5"
+}

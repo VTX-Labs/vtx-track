@@ -1,0 +1,17 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": ".",
+    "types": ["vscode", "node"],
+    // This package is bundled to a single CommonJS file by tsup (VS Code loads
+    // CJS), so it has no "type": "module" and its .ts files are not ESM-classified.
+    // Use Bundler resolution + non-verbatim module syntax so `tsc --noEmit` type-
+    // checks the ESM source the bundler consumes, without NodeNext's CJS rules.
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "verbatimModuleSyntax": false
+  },
+  "include": ["src", "test"],
+  "exclude": ["dist", "node_modules"]
+}

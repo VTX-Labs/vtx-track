@@ -1,0 +1,31 @@
+{
+  "name": "@vtx-track/browser-extension",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Manifest V3 browser extension that reports the active tab's domain (never the full URL by default) to the local vtx-track daemon for tab-granularity time tracking.",
+  "keywords": ["vtx-track", "vtx-labs", "browser-extension", "mv3", "time-tracking", "privacy"],
+  "homepage": "https://github.com/VTX-Labs/vtx-track/tree/main/apps/browser-extension#readme",
+  "bugs": "https://github.com/VTX-Labs/vtx-track/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/VTX-Labs/vtx-track.git",
+    "directory": "apps/browser-extension"
+  },
+  "license": "MIT",
+  "author": "VTX Labs (https://vtxlabs.dev)",
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "build": "node build.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.280",
+    "@types/node": "^25.9.1",
+    "esbuild": "^0.24.0",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  },
+  "packageManager": "pnpm@10.6.5"
+}

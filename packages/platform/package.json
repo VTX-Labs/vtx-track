@@ -1,0 +1,43 @@
+{
+  "name": "@vtx-track/platform",
+  "version": "0.1.0",
+  "description": "Cross-platform active-window and idle detection for vtx-track, behind one interface. Windows, macOS, Linux (X11), with honest Wayland fallback.",
+  "keywords": ["vtx-track", "vtx-labs", "active-window", "idle", "cross-platform"],
+  "homepage": "https://github.com/VTX-Labs/vtx-track/tree/main/packages/platform#readme",
+  "bugs": "https://github.com/VTX-Labs/vtx-track/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/VTX-Labs/vtx-track.git",
+    "directory": "packages/platform"
+  },
+  "license": "MIT",
+  "author": "VTX Labs (https://vtxlabs.dev)",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "types": "./dist/index.d.ts",
+  "files": ["dist", "README.md", "LICENSE"],
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "prepublishOnly": "pnpm typecheck && pnpm test && pnpm build"
+  },
+  "dependencies": {
+    "@vtx-track/protocol": "workspace:*",
+    "@paymoapp/active-window": "^2.1.4",
+    "@paymoapp/real-idle": "^1.1.2"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.1",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  },
+  "packageManager": "pnpm@10.6.5"
+}

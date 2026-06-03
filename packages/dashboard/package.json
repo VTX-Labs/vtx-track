@@ -1,0 +1,43 @@
+{
+  "name": "@vtx-track/dashboard",
+  "version": "0.1.0",
+  "description": "Minimal, no-framework localhost web dashboard for the vtx-track time tracker. Vanilla TypeScript plus uPlot, served by the daemon. Local-first, zero cloud.",
+  "keywords": ["vtx-track", "vtx-labs", "dashboard", "time-tracking", "uplot", "local-first"],
+  "homepage": "https://github.com/VTX-Labs/vtx-track/tree/main/packages/dashboard#readme",
+  "bugs": "https://github.com/VTX-Labs/vtx-track/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/VTX-Labs/vtx-track.git",
+    "directory": "packages/dashboard"
+  },
+  "license": "MIT",
+  "author": "VTX Labs (https://vtxlabs.dev)",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "types": "./dist/index.d.ts",
+  "files": ["dist", "README.md", "LICENSE"],
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "build": "tsup && node build.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "prepublishOnly": "pnpm typecheck && pnpm test && pnpm build"
+  },
+  "dependencies": {
+    "@vtx-track/protocol": "workspace:*",
+    "uplot": "^1.6.32"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.1",
+    "esbuild": "^0.24.0",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  },
+  "packageManager": "pnpm@10.6.5"
+}

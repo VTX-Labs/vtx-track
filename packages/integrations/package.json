@@ -1,0 +1,51 @@
+{
+  "name": "@vtx-track/integrations",
+  "version": "0.1.0",
+  "description": "Export/import adapters for vtx-track: WakaTime, Toggl, Clockify, CSV, JSON, and git attribution. Pure, local-first transforms with zero network calls.",
+  "keywords": [
+    "vtx-track",
+    "vtx-labs",
+    "time-tracking",
+    "wakatime",
+    "toggl",
+    "clockify",
+    "csv",
+    "export"
+  ],
+  "homepage": "https://github.com/VTX-Labs/vtx-track/tree/main/packages/integrations#readme",
+  "bugs": "https://github.com/VTX-Labs/vtx-track/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/VTX-Labs/vtx-track.git",
+    "directory": "packages/integrations"
+  },
+  "license": "MIT",
+  "author": "VTX Labs (https://vtxlabs.dev)",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "types": "./dist/index.d.ts",
+  "files": ["dist", "README.md", "LICENSE"],
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "prepublishOnly": "pnpm typecheck && pnpm test && pnpm build"
+  },
+  "dependencies": {
+    "@vtx-track/core": "workspace:*",
+    "@vtx-track/protocol": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.1",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  },
+  "packageManager": "pnpm@10.6.5"
+}

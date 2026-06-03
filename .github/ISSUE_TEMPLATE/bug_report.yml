@@ -1,0 +1,67 @@
+name: Bug report
+description: Something in vtx-track isn't working as expected.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing a bug. vtx-track is local-first — please **never** paste
+        real window titles, file paths, or other private data unless you're sure
+        it's safe to share. Redact freely.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Run `vtx-track start`
+        2. …
+        3. See …
+    validations:
+      required: true
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Which part?
+      multiple: true
+      options:
+        - daemon
+        - CLI
+        - VS Code extension
+        - dashboard
+        - browser extension
+        - service install
+        - sync
+        - other / not sure
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Windows
+        - macOS
+        - Linux (X11)
+        - Linux (Wayland)
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: Node version & commit
+      description: Output of `node -v` and the vtx-track commit SHA.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: From `~/.vtx-track/daemon.log` if applicable. Redact private data.
+      render: shell
