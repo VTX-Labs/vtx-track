@@ -21,11 +21,11 @@
     "test": "vitest run"
   },
   "devDependencies": {
-    "@types/chrome": "^0.0.280",
+    "@types/chrome": "^0.1.42",
     "@types/node": "^25.9.1",
-    "esbuild": "^0.24.0",
-    "typescript": "^5.7.2",
-    "vitest": "^2.1.8"
+    "esbuild": "^0.28.0",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.8"
   },
   "packageManager": "pnpm@10.6.5"
 }
