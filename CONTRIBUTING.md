@@ -61,7 +61,8 @@ Run a single package's checks with `pnpm --filter @vtx-track/<name> test` etc.
   out in the PR.
 - **Real tests.** Add vitest tests for new behavior. Never hit a live API or the
   network in a test — inject fakes (see existing tests for the pattern).
-- Before opening a PR: `pnpm typecheck && pnpm test && pnpm build` all green, and
+- Before opening a PR: `pnpm build && pnpm typecheck && pnpm test` all green
+  (build first — packages consume each other's emitted types), and
   the committed `pnpm-lock.yaml` is current.
 
 ## Pull requests
