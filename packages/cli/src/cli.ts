@@ -68,6 +68,8 @@ async function main(argv: string[]): Promise<number> {
       return cmdTimesheet(rest);
     case "export":
       return cmdExport(rest);
+    case "tray":
+      return cmdTray();
     case "pause":
       return cmdControl("pause");
     case "resume":
@@ -282,6 +284,36 @@ async function cmdControl(action: "pause" | "resume"): Promise<number> {
   return EXIT.ok;
 }
 
+/**
+ * Launch the system-tray companion. Runs in the foreground (Ctrl+C to quit);
+ * the OS service can launch it at login. The tray package is optional — if it
+ * isn't installed we explain how to add it rather than crash.
+ */
+async function cmdTray(): Promise<number> {
+  let TrayCtor: (new () => { start(): Promise<void> }) | undefined;
+  try {
+    // Variable specifier keeps this optional dependency out of the build's
+    // static module graph.
+    const specifier = "@vtx-track/tray";
+    const mod = (await import(specifier)) as {
+      Tray?: new () => { start(): Promise<void> };
+    };
+    TrayCtor = mod.Tray;
+  } catch {
+    TrayCtor = undefined;
+  }
+  if (!TrayCtor) {
+    err(color.yellow("The tray companion isn't installed."));
+    err(`Install it with ${color.cyan("npm i -g @vtx-track/tray")}.`);
+    return EXIT.error;
+  }
+  out(color.gray("vtx-track tray running - close this window or press Ctrl+C to quit."));
+  await new TrayCtor().start();
+  // Keep the process alive for the tray's lifetime.
+  await new Promise<never>(() => {});
+  return EXIT.ok;
+}
+
 async function cmdWipe(rest: string[]): Promise<number> {
   const { values } = parse(rest, { yes: { type: "boolean" } });
   if (!values.yes) {
@@ -348,6 +380,7 @@ function printHelp(): void {
       ["stop", "stop the daemon"],
       ["status", "show daemon status and capabilities"],
       ["pause / resume", "pause or resume tracking"],
+      ["tray", "run the system-tray companion (status, pause, dashboard)"],
     ]),
   );
   out();

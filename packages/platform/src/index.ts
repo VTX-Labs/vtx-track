@@ -1,6 +1,15 @@
 import { currentEnv, resolveCapabilities, isWayland, type Env } from "./detect.js";
 import { loadActiveWindow, loadRealIdle } from "./native.js";
-import { DegradedMonitor, NativeMonitor, toSample } from "./monitor.js";
+import {
+  DegradedMonitor,
+  NativeMonitor,
+  WaylandMonitor,
+  toSample,
+} from "./monitor.js";
+import {
+  currentWaylandEnv,
+  selectWaylandAdapter,
+} from "./wayland/index.js";
 import type { ActivityMonitor, PlatformCapabilities } from "./types.js";
 
 export type {
@@ -11,7 +20,23 @@ export type {
   WindowSample,
 } from "./types.js";
 export { resolveCapabilities, isWayland, currentEnv, type Env } from "./detect.js";
-export { NativeMonitor, DegradedMonitor, toSample } from "./monitor.js";
+export {
+  NativeMonitor,
+  DegradedMonitor,
+  WaylandMonitor,
+  toSample,
+} from "./monitor.js";
+export {
+  WAYLAND_ADAPTERS,
+  selectWaylandAdapter,
+  getWaylandActiveWindow,
+  currentWaylandEnv,
+  swayAdapter,
+  hyprlandAdapter,
+  gnomeAdapter,
+  type WaylandAdapter,
+  type WaylandEnv,
+} from "./wayland/index.js";
 
 /**
  * Build the best available {@link ActivityMonitor} for the current environment.
@@ -26,6 +51,31 @@ export { NativeMonitor, DegradedMonitor, toSample } from "./monitor.js";
 export async function createMonitor(env: Env = currentEnv()): Promise<ActivityMonitor> {
   const capabilities = resolveCapabilities(env);
   const idle = capabilities.canReadIdle ? await loadRealIdle() : null;
+
+  // On Wayland, try a compositor adapter (sway/i3, Hyprland, GNOME-via-extension)
+  // before degrading. When one is available we *can* identify the window after
+  // all — upgrade the capability flags and run the WaylandMonitor.
+  if (capabilities.platform === "linux" && isWayland(env)) {
+    const waylandEnv = currentWaylandEnv();
+    const adapter = selectWaylandAdapter(waylandEnv);
+    if (adapter) {
+      return new WaylandMonitor(
+        {
+          ...capabilities,
+          canIdentifyWindow: true,
+          canReadTitles: true,
+          limitationNote:
+            `Wayland (${adapter.name}): window/title read via the compositor's ` +
+            "IPC. GNOME requires the bundled vtx-track Shell extension.",
+        },
+        adapter,
+        waylandEnv,
+        idle,
+      );
+    }
+    // No adapter for this compositor — idle-only, with the existing note.
+    return new DegradedMonitor(capabilities, idle);
+  }
 
   if (!capabilities.canIdentifyWindow) {
     return new DegradedMonitor(capabilities, idle);

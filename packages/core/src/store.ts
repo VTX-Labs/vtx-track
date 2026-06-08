@@ -43,7 +43,22 @@ export class Store {
 
   constructor(dbPath: string) {
     mkdirSync(dirname(dbPath), { recursive: true });
-    this.db = new Database(dbPath);
+    try {
+      this.db = new Database(dbPath);
+    } catch (e) {
+      const msg = (e as Error)?.message ?? "";
+      // A missing/incompatible native binding surfaces here as a bindings error.
+      if (/bindings file|\.node|NODE_MODULE_VERSION|was compiled against/i.test(msg)) {
+        throw new Error(
+          "vtx-track could not load the SQLite native binding (better-sqlite3). " +
+            "It is missing or built for a different Node version. The daemon " +
+            "normally fetches it automatically on start; if you hit this " +
+            "elsewhere, run `node scripts/native-bootstrap.mjs` from the " +
+            `install directory. Original error: ${msg}`,
+        );
+      }
+      throw e;
+    }
     this.db.pragma("journal_mode = WAL");
     this.db.pragma("synchronous = NORMAL");
     this.db.pragma("foreign_keys = ON");

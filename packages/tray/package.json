@@ -1,27 +1,32 @@
 {
-  "name": "@vtx-track/cli",
+  "name": "@vtx-track/tray",
   "version": "0.1.0",
-  "description": "The vtx-track command line: start the tracker, see today/this-week, per-project and per-language time, standups, timesheets, and export — all local.",
-  "keywords": ["vtx-track", "vtx-labs", "time-tracking", "cli", "local-first"],
-  "homepage": "https://github.com/VTX-Labs/vtx-track/tree/main/packages/cli#readme",
+  "description": "Native system-tray companion for vtx-track — live status, pause/resume, open dashboard, quit. Talks to the local daemon over its localhost API.",
+  "keywords": ["vtx-track", "vtx-labs", "tray", "systray", "menu-bar"],
+  "homepage": "https://github.com/VTX-Labs/vtx-track/tree/main/packages/tray#readme",
   "bugs": "https://github.com/VTX-Labs/vtx-track/issues",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/VTX-Labs/vtx-track.git",
-    "directory": "packages/cli"
+    "directory": "packages/tray"
   },
   "license": "MIT",
   "author": "VTX Labs (https://vtxlabs.dev)",
   "type": "module",
   "bin": {
-    "vtx-track": "dist/cli.js",
-    "vtt": "dist/cli.js"
+    "vtx-track-tray": "dist/main.js"
   },
-  "files": ["dist", "README.md", "LICENSE"],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "types": "./dist/index.d.ts",
+  "files": ["dist", "icons", "README.md", "LICENSE"],
   "engines": { "node": ">=20" },
   "scripts": {
     "build": "tsup",
-    "dev": "tsx src/cli.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "prepublishOnly": "pnpm typecheck && pnpm test && pnpm build"
@@ -29,13 +34,11 @@
   "dependencies": {
     "@vtx-track/core": "workspace:*",
     "@vtx-track/protocol": "workspace:*",
-    "@vtx-track/service": "workspace:*",
-    "@vtx-track/tray": "workspace:*"
+    "systray2": "2.1.4"
   },
   "devDependencies": {
     "@types/node": "^25.9.1",
     "tsup": "^8.3.5",
-    "tsx": "^4.19.2",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"
   },

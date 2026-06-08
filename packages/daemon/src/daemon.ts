@@ -16,6 +16,7 @@ import { Tracker } from "./tracker.js";
 import { createHttpServer } from "./http.js";
 import { createIpcServer } from "./ipc.js";
 import { ensureToken } from "./token.js";
+import { ensureSqliteBinding } from "./native-ensure.js";
 
 export interface DaemonOptions {
   /** Override the loaded config (mainly for tests). */
@@ -58,6 +59,22 @@ export class Daemon {
 
   /** Construct a daemon, resolving the native monitor if none injected. */
   static async create(opts: DaemonOptions = {}): Promise<Daemon> {
+    // Self-heal the SQLite native binding if a scripts-disabled install left it
+    // missing. Skipped when a store is injected (tests) — nothing to open.
+    if (!opts.store) {
+      const ok = await ensureSqliteBinding((msg) =>
+        process.stdout.write(`${msg}\n`),
+      );
+      if (!ok) {
+        throw new Error(
+          "vtx-track: the SQLite native binding (better-sqlite3) is missing " +
+            "and could not be fetched automatically. Run " +
+            "`node scripts/native-bootstrap.mjs` from the install directory, " +
+            "or reinstall with install scripts enabled. See README → " +
+            "Troubleshooting.",
+        );
+      }
+    }
     const monitor = opts.monitor ?? (await createMonitor());
     return new Daemon(opts, monitor);
   }

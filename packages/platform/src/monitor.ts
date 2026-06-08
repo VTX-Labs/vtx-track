@@ -5,6 +5,7 @@ import type {
   WindowChangeListener,
 } from "./types.js";
 import type { ActiveWindowAddon, NativeWindowInfo, RealIdleAddon } from "./native.js";
+import type { WaylandAdapter, WaylandEnv } from "./wayland/index.js";
 
 /** Map a native window info into our protocol {@link WindowSample}. */
 export function toSample(
@@ -156,6 +157,113 @@ export class DegradedMonitor implements ActivityMonitor {
   stop(): void {
     /* nothing to release */
   }
+}
+
+/**
+ * A monitor for Wayland sessions, using a compositor adapter (sway/i3,
+ * Hyprland, or GNOME via our companion extension) to read the focused window.
+ * Wayland has no portable change subscription, so window changes are surfaced
+ * by polling the adapter; idle/lock state comes from the real-idle addon.
+ *
+ * If the adapter can't read a window (e.g. GNOME without the extension), this
+ * behaves like a {@link DegradedMonitor} — idle accounting still works.
+ */
+export class WaylandMonitor implements ActivityMonitor {
+  readonly capabilities: PlatformCapabilities;
+  private readonly adapter: WaylandAdapter;
+  private readonly env: WaylandEnv;
+  private readonly idle: RealIdleAddon | null;
+  private readonly pollMs: number;
+  private timer: ReturnType<typeof setInterval> | null = null;
+  private last: WindowSample | null = null;
+  private listeners = new Set<WindowChangeListener>();
+  private polling = false;
+
+  constructor(
+    capabilities: PlatformCapabilities,
+    adapter: WaylandAdapter,
+    env: WaylandEnv,
+    idle: RealIdleAddon | null,
+    pollMs = 2000,
+  ) {
+    this.capabilities = capabilities;
+    this.adapter = adapter;
+    this.env = env;
+    this.idle = idle;
+    this.pollMs = pollMs;
+  }
+
+  start(): void {
+    if (this.timer) return;
+    // Wayland has no portable change subscription, so we poll the adapter and
+    // cache the latest sample; getActiveWindow() then answers synchronously.
+    void this.poll();
+    this.timer = setInterval(() => void this.poll(), this.pollMs);
+    if (this.timer.unref) this.timer.unref();
+  }
+
+  /** Returns the most recent sampled window (the poll loop keeps it fresh). */
+  getActiveWindow(): WindowSample | null {
+    return this.last;
+  }
+
+  getIdle(idleThresholdSeconds: number): IdleReading {
+    if (!this.idle) return { state: "unknown", idleSeconds: -1, locked: false };
+    try {
+      return {
+        state: normalizeState(this.idle.getIdleState(idleThresholdSeconds)),
+        idleSeconds: safeNumber(this.idle.getIdleSeconds(), -1),
+        locked: safeBool(() => this.idle!.getLocked()),
+      };
+    } catch {
+      return { state: "unknown", idleSeconds: -1, locked: false };
+    }
+  }
+
+  onWindowChange(listener: WindowChangeListener): () => void {
+    this.listeners.add(listener);
+    // Ensure the poll loop is running even if start() wasn't called first.
+    this.start();
+    return () => {
+      this.listeners.delete(listener);
+    };
+  }
+
+  stop(): void {
+    if (this.timer) clearInterval(this.timer);
+    this.timer = null;
+    this.listeners.clear();
+  }
+
+  /** Sample the adapter once and notify listeners on change. Never throws. */
+  private async poll(): Promise<void> {
+    if (this.polling) return; // avoid overlap if a query is slow
+    this.polling = true;
+    try {
+      let sample: WindowSample | null = null;
+      try {
+        sample = await this.adapter.getActiveWindow(this.env);
+      } catch {
+        sample = null;
+      }
+      if (sample && !this.capabilities.canReadTitles) {
+        sample = { ...sample, title: "" };
+      }
+      if (!sameWindow(sample, this.last)) {
+        this.last = sample;
+        for (const l of this.listeners) l(sample);
+      }
+    } finally {
+      this.polling = false;
+    }
+  }
+}
+
+/** True when two window samples refer to the same app+title+pid. */
+function sameWindow(a: WindowSample | null, b: WindowSample | null): boolean {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  return a.app === b.app && a.title === b.title && a.pid === b.pid;
 }
 
 function normalizeState(state: string): ActivityState {

@@ -23,13 +23,14 @@
   "bin": {
     "vtx-track-daemon": "dist/main.js"
   },
-  "files": ["dist", "README.md", "LICENSE"],
+  "files": ["dist", "postinstall.mjs", "README.md", "LICENSE"],
   "engines": { "node": ">=20" },
   "scripts": {
     "build": "tsup",
     "dev": "tsx src/main.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "postinstall": "node postinstall.mjs",
     "prepublishOnly": "pnpm typecheck && pnpm test && pnpm build"
   },
   "dependencies": {

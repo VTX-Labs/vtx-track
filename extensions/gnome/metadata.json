@@ -1,0 +1,7 @@
+{
+  "uuid": "vtx-track@vtxlabs.dev",
+  "name": "vtx-track",
+  "description": "Exposes the focused window (app, title, pid) over D-Bus so the vtx-track daemon can do app-level time tracking under GNOME/Wayland, where no unprivileged active-window API exists. Read-only; data never leaves your machine.",
+  "shell-version": ["42", "43", "44", "45", "46", "47"],
+  "url": "https://github.com/VTX-Labs/vtx-track"
+}

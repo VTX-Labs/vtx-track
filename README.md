@@ -56,34 +56,56 @@ cloud, no telemetry.
 
 ---
 
-## Quick start
+## Install
 
-> Requires **Node ≥ 20** and **pnpm**. This is a source-first monorepo (it is not
-> published to npm); you run it from a clone.
+Three ways to install, depending on whether you want to *use* vtx-track or
+*hack on* it.
+
+### 1. Packaged installer (easiest — no Node needed)
+
+Download the installer for your OS from the
+[latest release](https://github.com/VTX-Labs/vtx-track/releases) and run it:
+
+| OS | File | Installs to | Service |
+|----|------|-------------|---------|
+| Windows | `vtx-track-<v>-x64.msi` | `%LOCALAPPDATA%\Programs\vtx-track` | Scheduled Task |
+| macOS | `vtx-track-<v>.pkg` | `/usr/local/vtx-track` | launchd agent |
+| Linux | `vtx-track_<v>_amd64.deb` | `/opt/vtx-track` | systemd `--user` |
+
+The Windows MSI bundles its own Node runtime; the macOS/Linux packages use your
+system Node (≥ 20). After install, `vtx-track` (alias `vtt`) is on your PATH and
+the background service is registered.
+
+### 2. Global npm (for Node users)
+
+```bash
+npm i -g @vtx-track/cli
+vtx-track start          # installs + starts the background service
+vtx-track today
+```
+
+The SQLite native binding is prepared on install, or fetched automatically on
+first `start` if your npm has `ignore-scripts` enabled — either way it just
+works. Add the tray with `npm i -g @vtx-track/tray` (or it ships with the
+installers).
+
+### 3. From source (for development)
+
+> Requires **Node ≥ 20** and **pnpm** (any 10.x).
 
 ```bash
 git clone https://github.com/VTX-Labs/vtx-track.git
 cd vtx-track
-pnpm install          # installs deps + fetches native prebuilds (see Troubleshooting)
+pnpm install          # installs deps + fetches native prebuilds
 pnpm build            # build every package
-
-# Start tracking (installs the background service for your OS):
 node packages/cli/dist/cli.js start
-
-# See where your time went:
 node packages/cli/dist/cli.js today
-node packages/cli/dist/cli.js status
 ```
 
-Once installed you can link the CLI bin so `vtx-track` (alias `vtt`) is on your
-PATH:
-
-```bash
-pnpm --filter @vtx-track/cli exec npm link   # optional convenience
-vtx-track today --by project
-```
+---
 
 Open the dashboard at **http://127.0.0.1:7842/** while the daemon is running.
+Launch the tray any time with `vtx-track tray`.
 
 ---
 

@@ -5,6 +5,11 @@ coverage/
 *.log
 .DS_Store
 
+# Packaging output (staged app tree + built installers).
+dist-stage/
+dist-installers/
+scripts/package/windows/Files.generated.wxs
+
 # Generated API docs (built fresh in CI, published to GitHub Pages).
 docs/
 
