@@ -40,8 +40,12 @@ cloud, no telemetry.
   branch, file, domain) — they never run a second clock.
 - **Smart idle.** Watching a video or sitting in a meeting doesn't count as
   "away" — and reports can tell focused work from passive time.
-- **Honest about limits.** On Wayland the active window can't be read (the OS
-  forbids it); vtx-track records that honestly instead of fabricating activity.
+- **A real tray, not a window.** An optional native system-tray icon shows live
+  status and gives one-click pause/resume and dashboard access — quitting it
+  never stops tracking.
+- **Honest about limits.** Wayland exposes no generic active-window API, so
+  vtx-track ships per-compositor adapters (sway/i3, Hyprland, GNOME) and, where
+  none applies, records window identity as `unknown` instead of fabricating it.
 
 ---
 
@@ -115,6 +119,7 @@ Launch the tray any time with `vtx-track tray`.
 Tracking
   start | stop | status        install/start, stop, or inspect the daemon
   pause | resume               pause or resume tracking
+  tray                         run the system-tray companion
 
 Reports
   today [--by app|category|project|language]
@@ -146,13 +151,13 @@ A headless daemon owns the timeline; thin clients read from it and enrich it.
                  │  platform (native window+idle) → sessionizer →  │
                  │  categorize → privacy filter → SQLite (WAL)     │
                  │  localhost HTTP API (127.0.0.1) + IPC socket    │
-                 └──▲────────────▲─────────────▲────────────▲──────┘
-       enrich/read  │            │             │            │
-        ┌───────────┘     ┌──────┘       ┌─────┘      ┌──────┘
-   ┌────┴──────┐   ┌───────┴────┐   ┌─────┴────┐  ┌────┴──────────┐
-   │ VS Code   │   │ Browser    │   │   CLI    │  │  Dashboard     │
-   │ extension │   │ extension  │   │vtx-track │  │  localhost web │
-   └───────────┘   └────────────┘   └──────────┘  └────────────────┘
+                 └─▲──────────▲────────────▲──────────▲─────────▲──┘
+     enrich/read   │          │            │          │         │
+       ┌───────────┘    ┌─────┘      ┌─────┘     ┌────┘    ┌────┘
+ ┌─────┴─────┐  ┌────────┴───┐  ┌─────┴────┐ ┌───┴─────┐ ┌─┴──────────┐
+ │ VS Code   │  │ Browser    │  │   CLI    │ │  Tray   │ │ Dashboard   │
+ │ extension │  │ extension  │  │vtx-track │ │  icon   │ │ localhost   │
+ └───────────┘  └────────────┘  └──────────┘ └─────────┘ └─────────────┘
 ```
 
 See [DESIGN.md](DESIGN.md) for the full architecture, SQLite schema, IPC
@@ -168,10 +173,11 @@ This is a pnpm workspace. Each package has its own README.
 | :------ | :--------- |
 | [`@vtx-track/protocol`](packages/protocol) | Shared wire types + a typed daemon client. Zero deps. |
 | [`@vtx-track/core`](packages/core) | Timeline engine: SQLite store, sessionizer, categorization, privacy filter, reporting. |
-| [`@vtx-track/platform`](packages/platform) | Cross-OS active-window + idle behind one interface, with the honest Wayland fallback. |
+| [`@vtx-track/platform`](packages/platform) | Cross-OS active-window + idle behind one interface, incl. Wayland compositor adapters (sway/i3, Hyprland, GNOME). |
 | [`@vtx-track/daemon`](packages/daemon) | The background service: sampler, HTTP API, IPC socket. |
 | [`@vtx-track/service`](packages/service) | Install as a service (Windows Task Scheduler / launchd / systemd). |
 | [`@vtx-track/cli`](packages/cli) | The `vtx-track` (alias `vtt`) command line. |
+| [`@vtx-track/tray`](packages/tray) | Native system-tray companion: live status, pause/resume, open dashboard, quit. |
 | [`@vtx-track/vscode`](packages/vscode) | VS Code extension — enriches the timeline with project/branch/file context. |
 | [`@vtx-track/dashboard`](packages/dashboard) | Minimal no-framework localhost dashboard (uPlot charts). |
 | [`@vtx-track/integrations`](packages/integrations) | Export to WakaTime / Toggl / Clockify / CSV / JSON; git attribution. |
@@ -206,13 +212,17 @@ See [PRIVACY.md](PRIVACY.md) for the full model.
 
 | Capability | Windows | macOS | Linux X11 | Linux Wayland |
 | :--------- | :-----: | :---: | :-------: | :-----------: |
-| Active app / process | ✅ | ✅ | ✅ | ⚠️ limited |
-| Window title | ✅ | ✅ (needs Screen Recording perm) | ✅ | ❌ (OS forbids) |
+| Active app / process | ✅ | ✅ | ✅ | ✅ with adapter¹ |
+| Window title | ✅ | ✅ (needs Screen Recording perm) | ✅ | ✅ with adapter¹ |
 | Idle / AFK | ✅ | ✅ | ✅ | ✅ |
 | Smart idle (video/meeting) | ➖ | ✅ | ✅ | ⚠️ |
 
-On Wayland, vtx-track records window identity as `unknown` rather than guessing;
-idle tracking still works, and the dashboard explains the limitation.
+¹ **Wayland** has no generic active-window API by design, so vtx-track talks to
+the compositor directly: built-in adapters for **sway/i3** and **Hyprland** (via
+their IPC sockets) and **GNOME** (via a bundled, read-only
+[Shell extension](extensions/gnome)). On a compositor with no adapter, idle
+tracking still works and window identity is recorded as `unknown` rather than
+guessed — the dashboard explains the limitation.
 
 ---
 
@@ -221,23 +231,40 @@ idle tracking still works, and the dashboard explains the limitation.
 ```bash
 pnpm install              # install + fetch native prebuilds
 pnpm build                # build all packages (topological)
-pnpm test                 # run every package's vitest suite
+pnpm test                 # run every package's vitest suite (191 tests)
 pnpm typecheck            # strict tsc across the workspace
 pnpm --filter @vtx-track/daemon dev      # run the daemon from source
+
+# Build the packaged installers (each runs on its own OS):
+pnpm stage                # assemble the self-contained app tree
+pnpm package:msi          # Windows MSI   (needs WiX 5 + dotnet)
+pnpm package:pkg          # macOS .pkg    (needs pkgbuild)
+pnpm package:deb          # Linux .deb    (needs dpkg-deb)
 ```
 
 The stack: **Node/TypeScript** (strict), **pnpm workspaces**, **tsup** (ESM +
 d.ts), **vitest**. Native: `@paymoapp/active-window`, `@paymoapp/real-idle`,
-`better-sqlite3`. Charts: `uPlot`. No Electron; bloat-free by design.
+`better-sqlite3`, `systray2` (tray). Charts: `uPlot`. No Electron; bloat-free by
+design. Installer packaging lives in [`scripts/package`](scripts/package).
 
 ### Troubleshooting native modules
 
 vtx-track uses three native addons. A repo-root `postinstall`
 ([`scripts/fetch-native.mjs`](scripts/fetch-native.mjs)) fetches their prebuilt
-binaries automatically after `pnpm install`. If it can't find a prebuilt binary
-for your platform/Node version it falls back to compiling from source, which
-needs a C/C++ toolchain (Xcode CLT on macOS, build-essential on Linux, VS Build
-Tools on Windows). Re-run it any time with `node scripts/fetch-native.mjs`.
+binaries after install, with three escalating strategies: each addon's own
+`prebuild-install`, then a direct download from the publisher's GitHub release,
+then a source build (which needs a C/C++ toolchain — Xcode CLT on macOS,
+build-essential on Linux, VS Build Tools on Windows).
+
+You normally never have to think about this: if your npm/pnpm has
+`ignore-scripts` enabled (so the postinstall is skipped), **the daemon fetches
+the SQLite binding itself on first `start`** — a clean install just works. You
+can also run the fetcher manually any time:
+
+```bash
+node scripts/native-bootstrap.mjs --list   # show what's resolved / missing
+node scripts/fetch-native.mjs              # fetch anything missing
+```
 
 ---
 
@@ -249,8 +276,9 @@ Tools on Windows). Re-run it any time with `node scripts/fetch-native.mjs`.
   goals & limits, standup + billable timesheets.
 - **v3 — reach** *(shipped)*: browser extension, self-hosted encrypted sync,
   WakaTime/Toggl/Clockify export, git attribution.
-- **Planned**: native tray companion, Wayland compositor adapters, packaged
-  installers (MSI / pkg / deb).
+- **v4 — install & desktop** *(shipped)*: native tray companion, Wayland
+  compositor adapters (sway/i3, Hyprland, GNOME), and packaged installers
+  (MSI / pkg / deb) built per-OS in CI.
 
 Contributions welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
 
