@@ -48,7 +48,9 @@ export const DEFAULT_SETTINGS: Settings = {
 
 /** Read the full settings object, filling any missing keys with defaults. */
 export async function getSettings(): Promise<Settings> {
-  const stored = await chrome.storage.sync.get(DEFAULT_SETTINGS);
+  const stored = (await chrome.storage.sync.get(
+    DEFAULT_SETTINGS as unknown as Record<string, unknown>,
+  )) as Record<string, unknown>;
   return {
     enabled: Boolean(stored.enabled),
     sendTabTitles: Boolean(stored.sendTabTitles),
