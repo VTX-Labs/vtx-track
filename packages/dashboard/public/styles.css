@@ -66,15 +66,32 @@ body {
 
 body {
   font-family: var(--font);
-  background:
-    radial-gradient(1200px 600px at 80% -10%, var(--brand-soft), transparent 60%),
-    var(--bg);
-  background-attachment: fixed;
+  /* The brand gradient is painted on a fixed pseudo-element (::before) rather
+     than via `background-attachment: fixed` on the body. A fixed background
+     combined with the sticky top bar's `backdrop-filter: blur()` triggers a
+     Chromium/Windows compositing bug where the content layer stops repainting
+     while scrolling (the scrollbar moves but the page appears frozen). A fixed
+     pseudo-element keeps the same look without that desync. */
+  background: var(--bg);
   color: var(--text);
   line-height: 1.5;
   font-size: 15px;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  min-height: 100vh;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(
+    1200px 600px at 80% -10%,
+    var(--brand-soft),
+    transparent 60%
+  );
 }
 
 /* ── Top bar ── */

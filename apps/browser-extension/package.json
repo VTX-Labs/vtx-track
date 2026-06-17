@@ -14,7 +14,7 @@
   "license": "MIT",
   "author": "VTX Labs (https://vtxlabs.dev)",
   "type": "module",
-  "engines": { "node": ">=20" },
+  "engines": { "node": ">=22" },
   "scripts": {
     "build": "node build.mjs",
     "typecheck": "tsc --noEmit",

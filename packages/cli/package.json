@@ -18,7 +18,7 @@
     "vtt": "dist/cli.js"
   },
   "files": ["dist", "README.md", "LICENSE"],
-  "engines": { "node": ">=20" },
+  "engines": { "node": ">=22" },
   "scripts": {
     "build": "tsup",
     "dev": "tsx src/cli.ts",

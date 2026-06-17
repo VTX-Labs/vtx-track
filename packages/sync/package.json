@@ -24,7 +24,7 @@
     "vtx-track-sync-server": "dist/server-main.js"
   },
   "files": ["dist", "README.md", "LICENSE"],
-  "engines": { "node": ">=20" },
+  "engines": { "node": ">=22" },
   "scripts": {
     "build": "tsup",
     "dev": "tsx src/server-main.ts",
