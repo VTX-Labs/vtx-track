@@ -1,6 +1,7 @@
 {
-  "name": "@vtx-track/vscode",
+  "name": "vtx-track-vscode",
   "displayName": "vtx-track",
+  "publisher": "vtx-labs",
   "version": "0.1.0",
   "description": "Enriches the vtx-track daemon's timeline with VS Code context — workspace, git repo/branch, active file, language, and edit/debug/test/terminal mode — plus a status-bar widget. No double-counting: the daemon owns the clock.",
   "keywords": ["vtx-track", "vtx-labs", "time-tracking", "vscode", "local-first"],
@@ -13,7 +14,6 @@
   },
   "license": "MIT",
   "author": "VTX Labs (https://vtxlabs.dev)",
-  "publisher": "vtx-labs",
   "main": "./dist/extension.js",
   "engines": {
     "vscode": "^1.90.0",
@@ -49,13 +49,11 @@
       }
     }
   },
-  "files": ["dist", "README.md", "LICENSE"],
   "scripts": {
     "build": "tsup",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "package": "vsce package --no-dependencies",
-    "prepublishOnly": "pnpm typecheck && pnpm test && pnpm build"
+    "package": "vsce package --no-dependencies"
   },
   "dependencies": {
     "@vtx-track/protocol": "workspace:*"

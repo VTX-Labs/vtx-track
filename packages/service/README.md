@@ -4,7 +4,7 @@
 
 This package registers the [daemon](../daemon/README.md) with the operating system's own service mechanism so it starts at login and stays alive across crashes and reboots — without staying attached to a terminal and without (on the common paths) needing admin rights. The [CLI](../cli/README.md)'s `start` / `stop` / `install` commands are thin wrappers over this package. See [DESIGN.md](../../DESIGN.md) for the overall architecture.
 
-It is part of the vtx-track workspace and consumed via `workspace:*`; it is not published to npm.
+It is part of the vtx-track workspace and consumed via `workspace:*`.
 
 ## Per-platform mechanism
 

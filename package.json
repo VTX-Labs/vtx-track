@@ -21,11 +21,7 @@
     "dev": "pnpm --filter @vtx-track/cli dev",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test",
-    "stage": "node scripts/package/stage.mjs",
-    "package:msi": "node scripts/package/windows/build-msi.mjs",
-    "package:pkg": "node scripts/package/macos/build-pkg.mjs",
-    "package:deb": "node scripts/package/linux/build-deb.mjs",
-    "clean": "pnpm -r exec rimraf dist coverage && rimraf dist-stage dist-installers"
+    "clean": "pnpm -r exec rimraf dist coverage"
   },
   "devDependencies": {
     "@types/node": "^25.9.2",

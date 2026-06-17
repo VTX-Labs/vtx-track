@@ -135,9 +135,13 @@ export class WindowsTaskManager implements ServiceManager {
 
   async install(): Promise<void> {
     mkdirSync(dataDir(), { recursive: true });
-    // Task Scheduler XML must be UTF-16LE with a BOM.
-    writeFileSync(this.xmlPath, windowsTaskXml(this.spec), { encoding: "utf16le" });
-    await run("schtasks", [
+    // Task Scheduler XML must be UTF-16LE *with a BOM* — schtasks rejects it as
+    // "malformed / one root element" otherwise. Node's "utf16le" encoding does
+    // not emit a BOM, so prepend U+FEFF ourselves.
+    writeFileSync(this.xmlPath, "﻿" + windowsTaskXml(this.spec), {
+      encoding: "utf16le",
+    });
+    const created = await run("schtasks", [
       "/Create",
       "/TN",
       this.taskName,
@@ -145,6 +149,11 @@ export class WindowsTaskManager implements ServiceManager {
       this.xmlPath,
       "/F",
     ]);
+    if (!created.ok) {
+      throw new Error(
+        `schtasks /Create failed: ${created.stderr.trim() || created.stdout.trim() || "unknown error"}`,
+      );
+    }
     await this.start();
   }
 

@@ -62,54 +62,67 @@ cloud, no telemetry.
 
 ## Install
 
-Three ways to install, depending on whether you want to *use* vtx-track or
-*hack on* it.
+vtx-track is used by **cloning this repo and building from source.** It is *not*
+published to npm, and there are no prebuilt installers or downloads — you run it
+locally from your own checkout.
 
-### 1. Packaged installer (easiest — no Node needed)
-
-Download the installer for your OS from the
-[latest release](https://github.com/VTX-Labs/vtx-track/releases) and run it:
-
-| OS | File | Installs to | Service |
-|----|------|-------------|---------|
-| Windows | `vtx-track-<v>-x64.msi` | `%LOCALAPPDATA%\Programs\vtx-track` | Scheduled Task |
-| macOS | `vtx-track-<v>.pkg` | `/usr/local/vtx-track` | launchd agent |
-| Linux | `vtx-track_<v>_amd64.deb` | `/opt/vtx-track` | systemd `--user` |
-
-The Windows MSI bundles its own Node runtime; the macOS/Linux packages use your
-system Node (≥ 20). After install, `vtx-track` (alias `vtt`) is on your PATH and
-the background service is registered.
-
-### 2. Global npm (for Node users)
-
-```bash
-npm i -g @vtx-track/cli
-vtx-track start          # installs + starts the background service
-vtx-track today
-```
-
-The SQLite native binding is prepared on install, or fetched automatically on
-first `start` if your npm has `ignore-scripts` enabled — either way it just
-works. Add the tray with `npm i -g @vtx-track/tray` (or it ships with the
-installers).
-
-### 3. From source (for development)
-
-> Requires **Node ≥ 20** and **pnpm** (any 10.x).
+> Requires **Node ≥ 20** and **pnpm 10.x**.
 
 ```bash
 git clone https://github.com/VTX-Labs/vtx-track.git
 cd vtx-track
 pnpm install          # installs deps + fetches native prebuilds
 pnpm build            # build every package
-node packages/cli/dist/cli.js start
+node packages/cli/dist/cli.js start    # start the background daemon
 node packages/cli/dist/cli.js today
 ```
 
----
+That's the whole tracker. `node packages/cli/dist/cli.js` is the `vtx-track`
+command — symlink or alias it (e.g. `alias vtx-track="node /path/to/vtx-track/packages/cli/dist/cli.js"`)
+so you can just type `vtx-track <command>`.
 
-Open the dashboard at **http://127.0.0.1:7842/** while the daemon is running.
-Launch the tray any time with `vtx-track tray`.
+### Optional components
+
+Set any of these up after cloning and building:
+
+#### CLI
+
+The `vtx-track` commands (already built by `pnpm build`). It's the front door:
+`start`, `stop`, `today`, `week`, `project`, `language`, `standup`, `timesheet`,
+`export`, and more. See [`packages/cli/README.md`](packages/cli/README.md).
+
+#### Dashboard
+
+Open **http://127.0.0.1:7842/** in your browser while the daemon is running. The
+daemon serves it; nothing extra to install.
+
+#### Tray
+
+A native system-tray icon with live status and one-click pause/resume:
+
+```bash
+node packages/tray/dist/main.js
+# or: pnpm --filter @vtx-track/tray ...
+```
+
+#### VS Code extension
+
+Build a local `.vsix` from source and install it into VS Code:
+
+```bash
+pnpm --filter vtx-track-vscode package       # produces a .vsix
+code --install-extension packages/vscode/vtx-track-vscode-0.1.0.vsix
+```
+
+Or in VS Code: Command Palette → **Extensions: Install from VSIX…** and pick the
+generated file. The extension enriches your timeline with per-project, per-file,
+per-language, and per-branch data while you code.
+
+#### Browser extension
+
+Load [`apps/browser-extension`](apps/browser-extension) as an unpacked extension
+in your browser (Chrome/Edge: `chrome://extensions` → Developer mode → *Load
+unpacked*). Check that folder's README for the build step.
 
 ---
 
@@ -178,7 +191,7 @@ This is a pnpm workspace. Each package has its own README.
 | [`@vtx-track/service`](packages/service) | Install as a service (Windows Task Scheduler / launchd / systemd). |
 | [`@vtx-track/cli`](packages/cli) | The `vtx-track` (alias `vtt`) command line. |
 | [`@vtx-track/tray`](packages/tray) | Native system-tray companion: live status, pause/resume, open dashboard, quit. |
-| [`@vtx-track/vscode`](packages/vscode) | VS Code extension — enriches the timeline with project/branch/file context. |
+| [`vtx-track-vscode`](packages/vscode) | VS Code extension — enriches the timeline with project/branch/file context. |
 | [`@vtx-track/dashboard`](packages/dashboard) | Minimal no-framework localhost dashboard (uPlot charts). |
 | [`@vtx-track/integrations`](packages/integrations) | Export to WakaTime / Toggl / Clockify / CSV / JSON; git attribution. |
 | [`@vtx-track/sync`](packages/sync) | Optional self-hosted, end-to-end-encrypted multi-machine sync. |
@@ -234,18 +247,12 @@ pnpm build                # build all packages (topological)
 pnpm test                 # run every package's vitest suite (191 tests)
 pnpm typecheck            # strict tsc across the workspace
 pnpm --filter @vtx-track/daemon dev      # run the daemon from source
-
-# Build the packaged installers (each runs on its own OS):
-pnpm stage                # assemble the self-contained app tree
-pnpm package:msi          # Windows MSI   (needs WiX 5 + dotnet)
-pnpm package:pkg          # macOS .pkg    (needs pkgbuild)
-pnpm package:deb          # Linux .deb    (needs dpkg-deb)
 ```
 
 The stack: **Node/TypeScript** (strict), **pnpm workspaces**, **tsup** (ESM +
 d.ts), **vitest**. Native: `@paymoapp/active-window`, `@paymoapp/real-idle`,
 `better-sqlite3`, `systray2` (tray). Charts: `uPlot`. No Electron; bloat-free by
-design. Installer packaging lives in [`scripts/package`](scripts/package).
+design.
 
 ### Troubleshooting native modules
 
@@ -276,9 +283,8 @@ node scripts/fetch-native.mjs              # fetch anything missing
   goals & limits, standup + billable timesheets.
 - **v3 — reach** *(shipped)*: browser extension, self-hosted encrypted sync,
   WakaTime/Toggl/Clockify export, git attribution.
-- **v4 — install & desktop** *(shipped)*: native tray companion, Wayland
-  compositor adapters (sway/i3, Hyprland, GNOME), and packaged installers
-  (MSI / pkg / deb) built per-OS in CI.
+- **v4 — desktop** *(shipped)*: native tray companion and Wayland compositor
+  adapters (sway/i3, Hyprland, GNOME).
 
 Contributions welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
 

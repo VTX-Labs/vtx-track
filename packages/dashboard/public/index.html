@@ -31,8 +31,7 @@
       <div id="offline-banner" class="banner banner-offline" hidden>
         <strong>Daemon offline.</strong> The vtx-track daemon isn't reachable on
         this machine. Start it (for example with
-        <code>vtx-track service start</code>) and this page will fill in
-        automatically.
+        <code>vtx-track start</code>) and this page will fill in automatically.
       </div>
 
       <div id="wayland-note" class="banner banner-warn" hidden>
@@ -41,40 +40,72 @@
         tracking still work. See the docs to enable the GNOME/KWin adapter.
       </div>
 
-      <section class="grid">
-        <div class="panel">
-          <h2>By category</h2>
-          <div id="summary-category" class="panel-body"></div>
+      <!-- Hero: headline total + live activity sparkline -->
+      <section class="hero">
+        <div class="hero-main">
+          <div class="hero-eyebrow" id="hero-eyebrow">Today</div>
+          <div class="hero-total" id="hero-total">—</div>
+          <div class="hero-sub" id="hero-sub">tracked time</div>
         </div>
-        <div class="panel">
-          <h2>By app</h2>
-          <div id="summary-app" class="panel-body"></div>
+        <div class="hero-spark">
+          <div class="hero-spark-label">Activity</div>
+          <div id="hero-sparkline" class="hero-spark-chart"></div>
         </div>
       </section>
 
+      <!-- KPI strip -->
+      <section id="kpi-strip" class="kpi-strip"></section>
+
+      <!-- Apps (with real icons) + category donut -->
+      <section class="grid grid-2">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>By app</h2>
+            <span class="panel-meta" id="app-count"></span>
+          </div>
+          <div id="summary-app" class="panel-body"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <h2>By category</h2>
+          </div>
+          <div id="summary-category" class="panel-body donut-wrap"></div>
+        </div>
+      </section>
+
+      <!-- Timeline -->
       <section class="panel panel-wide">
-        <h2>Timeline</h2>
+        <div class="panel-head">
+          <h2>Timeline</h2>
+          <span class="panel-meta" id="timeline-meta"></span>
+        </div>
         <div id="timeline-chart" class="panel-body chart"></div>
       </section>
 
-      <section class="panel panel-wide">
-        <h2>Focus</h2>
-        <div id="focus-cards" class="panel-body cards"></div>
-      </section>
-
-      <section class="grid">
+      <!-- Projects + languages -->
+      <section class="grid grid-2">
         <div class="panel">
-          <h2>Top projects</h2>
+          <div class="panel-head">
+            <h2>Top projects</h2>
+            <span class="panel-meta">needs the VS Code extension</span>
+          </div>
           <div id="summary-project" class="panel-body"></div>
         </div>
         <div class="panel">
-          <h2>Top languages</h2>
+          <div class="panel-head">
+            <h2>Top languages</h2>
+            <span class="panel-meta">needs the VS Code extension</span>
+          </div>
           <div id="summary-language" class="panel-body"></div>
         </div>
       </section>
 
+      <!-- Standup -->
       <section class="panel panel-wide">
-        <h2>Standup preview</h2>
+        <div class="panel-head">
+          <h2>Standup preview</h2>
+          <button id="standup-copy" class="ghost-btn" type="button">Copy</button>
+        </div>
         <div id="standup-preview" class="panel-body"></div>
       </section>
     </main>

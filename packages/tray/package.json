@@ -28,8 +28,7 @@
   "scripts": {
     "build": "tsup",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
-    "prepublishOnly": "pnpm typecheck && pnpm test && pnpm build"
+    "test": "vitest run"
   },
   "dependencies": {
     "@vtx-track/core": "workspace:*",

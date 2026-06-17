@@ -47,6 +47,13 @@ export interface WindowSample {
   exePath: string;
   /** OS process id, or -1 when unavailable. */
   pid: number;
+  /**
+   * The app's icon as a `data:image/png;base64,…` URI, when the platform layer
+   * can read it (Windows/macOS via the native addon). Undefined otherwise. Not
+   * persisted to the timeline — the daemon caches it by app name to serve to the
+   * dashboard.
+   */
+  icon?: string;
 }
 
 /** Idle reading from the platform layer at a moment in time. */

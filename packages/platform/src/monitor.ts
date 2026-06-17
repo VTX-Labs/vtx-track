@@ -18,6 +18,9 @@ export function toSample(
     title: canReadTitles ? info.title : "",
     exePath: info.path ?? "",
     pid: typeof info.pid === "number" ? info.pid : -1,
+    // The native addon returns a `data:image/png;base64,…` icon on Windows/macOS.
+    // Carry it through; the daemon caches it per-app to serve to the dashboard.
+    ...(typeof info.icon === "string" && info.icon ? { icon: info.icon } : {}),
   };
 }
 

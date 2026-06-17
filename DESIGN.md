@@ -73,7 +73,7 @@ leaves it unless you explicitly turn on export or self-hosted sync.
 | `@vtx-track/protocol` | Shared wire types + a typed HTTP client used by CLI/extension/dashboard. No deps. | everywhere |
 | `@vtx-track/service` | Cross-OS service install/uninstall (Windows Task Scheduler, launchd, systemd user unit). | install-time |
 | `@vtx-track/cli` | `vtx-track …` — start/stop service, today/week/project reports, export, config, privacy. | terminal |
-| `@vtx-track/vscode` | VS Code extension: folder/file/language/branch/debug/test enrichment + status bar. | VS Code |
+| `vtx-track-vscode` | VS Code extension: folder/file/language/branch/debug/test enrichment + status bar. | VS Code |
 | `@vtx-track/dashboard` | Minimal no-framework localhost UI (vanilla TS + uPlot), served by the daemon. | browser |
 | `@vtx-track/sync` | Optional self-hosted sync server + client (encrypted, multi-machine merge). | opt-in |
 | `@vtx-track/integrations` | Export/import: WakaTime, Toggl, Clockify, generic CSV/JSON, Git/GitHub/Jira linking. | opt-in |

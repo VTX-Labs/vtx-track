@@ -4,7 +4,7 @@
 
 vtx-track is local-first by default; sync is entirely opt-in. This package lets you stand up your **own** tiny sync server and point your machines at it. Each machine encrypts its segments client-side and uploads only ciphertext; pulling decrypts everyone else's segments locally and merges them into one timeline. The server is deliberately dumb — it stores one opaque blob per device and hands it back. See [DESIGN.md](../../DESIGN.md) for where this fits.
 
-It is part of the vtx-track workspace and not published to npm.
+It is part of the vtx-track workspace and consumed via `workspace:*`.
 
 ## How the encryption works (the server can't read your data)
 

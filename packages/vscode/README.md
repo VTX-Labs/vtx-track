@@ -1,4 +1,4 @@
-# @vtx-track/vscode
+# vtx-track-vscode
 
 The VS Code extension for [vtx-track](https://github.com/VTX-Labs/vtx-track) —
 a local-first, privacy-first time tracker for your whole machine.
@@ -72,15 +72,15 @@ window, so reports can split active editing from "editor focused but idle".
 
 Clicking the status-bar item also opens the dashboard at the daemon URL.
 
-## Install the `.vsix`
+## Build & install the `.vsix`
 
-The extension is published to the daemon repo's releases. To build and install
-it locally:
+The extension is not published to any marketplace — you build a `.vsix` locally
+from source and install it into VS Code:
 
 ```sh
 # from the monorepo root
-pnpm --filter @vtx-track/vscode build      # emits dist/extension.js (CommonJS)
-pnpm --filter @vtx-track/vscode package     # produces a .vsix via @vscode/vsce
+pnpm --filter vtx-track-vscode build        # emits dist/extension.js (CommonJS)
+pnpm --filter vtx-track-vscode package      # produces a .vsix via @vscode/vsce
 ```
 
 Then in VS Code: open the Command Palette, run
@@ -88,7 +88,7 @@ Then in VS Code: open the Command Palette, run
 terminal:
 
 ```sh
-code --install-extension vtx-track-0.1.0.vsix
+code --install-extension vtx-track-vscode-0.1.0.vsix
 ```
 
 The extension activates on startup (`onStartupFinished`) and begins enriching

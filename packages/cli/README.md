@@ -4,7 +4,7 @@
 
 This is the front door to vtx-track. It talks to the local [daemon](../daemon/README.md) over its `127.0.0.1` HTTP API (via [@vtx-track/protocol](../protocol/README.md)), formats the results for your terminal, and manages the background service through [@vtx-track/service](../service/README.md). See the [DESIGN.md](../../DESIGN.md) for how the pieces fit.
 
-It is part of the vtx-track workspace and not published to npm.
+It is part of the vtx-track workspace.
 
 ## Invocation
 

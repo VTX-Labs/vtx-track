@@ -19,7 +19,7 @@ The processing pipeline is: a sample is run through the **privacy filter**, then
 | Reporting | `summarize`, `focusMetrics`, `standup`, `timesheet`, `fmtDuration` |
 | Time helpers | `startOfDay`, `endOfDay`, `toDateString`, `fromDateString`, `dayRange`, `lastNDays` |
 
-It is part of the vtx-track workspace and consumed via `workspace:*`; it is not published to npm.
+It is part of the vtx-track workspace and consumed via `workspace:*`.
 
 ## The store
 

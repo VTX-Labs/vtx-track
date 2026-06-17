@@ -6,7 +6,7 @@ This package is the only part of vtx-track that touches native OS APIs. It wraps
 
 Its defining principle is **honesty about limitations**: rather than silently recording bad data when the OS won't tell us what we need, it resolves a capability set up front and degrades gracefully, annotating *why*.
 
-It is part of the vtx-track workspace and consumed via `workspace:*`; it is not published to npm.
+It is part of the vtx-track workspace and consumed via `workspace:*`.
 
 ## Usage
 

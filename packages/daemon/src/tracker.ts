@@ -58,6 +58,12 @@ export class Tracker {
   private vscodeByPid = new Map<number, { ctx: VsCodeContext; at: number }>();
   /** Latest browser context by pid (set by the browser extension bridge). */
   private browserByPid = new Map<number, { ctx: BrowserContext; at: number }>();
+  /**
+   * App icons (`data:image/png;base64,…`) keyed by app name, harvested live from
+   * window samples. Kept in memory only — the dashboard fetches them via
+   * `GET /icon`. Bounded by the number of distinct apps seen this run.
+   */
+  private iconByApp = new Map<string, string>();
 
   constructor(deps: TrackerDeps) {
     this.monitor = deps.monitor;
@@ -154,6 +160,12 @@ export class Tracker {
     const sample = this.lastSample ?? this.monitor.getActiveWindow() ?? UNKNOWN_SAMPLE;
     const idle = this.monitor.getIdle(this.config.idleThresholdSeconds);
 
+    // Harvest the app icon (if the platform supplied one) so the dashboard can
+    // show real logos. Kept in memory, never written to the timeline.
+    if (sample.icon && sample.app && !this.iconByApp.has(sample.app)) {
+      this.iconByApp.set(sample.app, sample.icon);
+    }
+
     const browser = this.contextFor(this.browserByPid, sample.pid, at);
     const vscode = this.contextFor(this.vscodeByPid, sample.pid, at);
     const domain = browser?.domain;
@@ -204,6 +216,19 @@ export class Tracker {
   /** Expose recent segments for the API/reports. */
   segmentsBetween(from: number, to: number): Segment[] {
     return this.store.segmentsBetween(from, to);
+  }
+
+  /**
+   * The cached icon (`data:image/png;base64,…`) for an app, or undefined if none
+   * was captured. Used by the daemon's `GET /icon` endpoint.
+   */
+  iconFor(app: string): string | undefined {
+    return this.iconByApp.get(app);
+  }
+
+  /** App names that currently have a cached icon. */
+  appsWithIcons(): string[] {
+    return [...this.iconByApp.keys()];
   }
 }
 

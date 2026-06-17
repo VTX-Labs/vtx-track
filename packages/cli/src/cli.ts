@@ -303,8 +303,8 @@ async function cmdTray(): Promise<number> {
     TrayCtor = undefined;
   }
   if (!TrayCtor) {
-    err(color.yellow("The tray companion isn't installed."));
-    err(`Install it with ${color.cyan("npm i -g @vtx-track/tray")}.`);
+    err(color.yellow("The tray companion isn't built."));
+    err(`Build the workspace with ${color.cyan("pnpm build")}, then retry.`);
     return EXIT.error;
   }
   out(color.gray("vtx-track tray running - close this window or press Ctrl+C to quit."));

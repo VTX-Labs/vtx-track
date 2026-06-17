@@ -58,7 +58,11 @@ export class DaemonClient {
   constructor(opts: DaemonClientOptions = {}) {
     this.baseUrl = (opts.baseUrl ?? "http://127.0.0.1:7842").replace(/\/$/, "");
     this.token = opts.token;
-    this.fetchImpl = opts.fetch ?? globalThis.fetch;
+    // Bind to globalThis: the browser's `window.fetch` throws "Illegal
+    // invocation" if called as a method of another object (i.e. detached from
+    // `window`). Node's fetch doesn't care, which is why this only bit browsers.
+    const f = opts.fetch ?? globalThis.fetch;
+    this.fetchImpl = f.bind(globalThis);
   }
 
   /** Daemon liveness + capability summary. */
@@ -115,6 +119,20 @@ export class DaemonClient {
   /** Read the current daemon configuration. */
   getConfig(): Promise<Config> {
     return this.get<Config>("/config");
+  }
+
+  /** App names that have a real icon available from `iconUrl`. */
+  iconApps(): Promise<{ apps: string[] }> {
+    return this.get<{ apps: string[] }>("/icons");
+  }
+
+  /**
+   * URL of an app's real icon PNG (served by the daemon). Returns a string for
+   * use as an `<img src>`; the endpoint 404s when no icon exists so the caller
+   * can fall back to a generated badge via the image's `onerror`.
+   */
+  iconUrl(app: string): string {
+    return `${this.baseUrl}/icon?app=${encodeURIComponent(app)}`;
   }
 
   /** Update configuration (control token required). Returns the merged config. */

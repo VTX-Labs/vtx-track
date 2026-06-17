@@ -117,6 +117,33 @@ async function handle(
     return;
   }
 
+  // The set of app names that have a real icon cached, so the dashboard can
+  // request only what exists and fall back to a generated badge otherwise.
+  if (path === "/icons" && method === "GET") {
+    sendJson(res, 200, { apps: deps.tracker.appsWithIcons() });
+    return;
+  }
+
+  // A single app's real icon as a PNG. `?app=<name>` — names match the "By app"
+  // summary keys. 404 (not error) when we have no icon, so the dashboard quietly
+  // falls back. Cached aggressively: an app's icon doesn't change within a run.
+  if (path === "/icon" && method === "GET") {
+    const app = url.searchParams.get("app") ?? "";
+    const dataUri = app ? deps.tracker.iconFor(app) : undefined;
+    const png = dataUri ? decodePngDataUri(dataUri) : null;
+    if (!png) {
+      sendJson(res, 404, { error: "no icon" });
+      return;
+    }
+    res.writeHead(200, {
+      "content-type": "image/png",
+      "content-length": png.length,
+      "cache-control": "public, max-age=86400",
+    });
+    res.end(png);
+    return;
+  }
+
   // ── Context push (from VS Code / browser extensions) ───────────────────
   if (path === "/context/vscode" && method === "POST") {
     const body = await readBody(req);
@@ -213,6 +240,20 @@ function today(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
     d.getDate(),
   ).padStart(2, "0")}`;
+}
+
+/**
+ * Decode a `data:image/png;base64,…` URI into a PNG Buffer, or null if it isn't
+ * a base64 PNG data URI. The platform layer supplies icons in exactly this form.
+ */
+function decodePngDataUri(uri: string): Buffer | null {
+  const m = /^data:image\/png;base64,([A-Za-z0-9+/=]+)$/.exec(uri);
+  if (!m || !m[1]) return null;
+  try {
+    return Buffer.from(m[1], "base64");
+  } catch {
+    return null;
+  }
 }
 
 function sendJson(res: ServerResponse, status: number, body: unknown): void {
