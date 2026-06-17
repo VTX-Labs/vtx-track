@@ -9,6 +9,29 @@
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
+    <!-- AI copilot: docks as a left rail (inline content, not an overlay). -->
+    <aside id="copilot" class="copilot" aria-label="AI copilot" aria-hidden="true">
+      <header class="copilot-head">
+        <div class="copilot-title">
+          <span class="ai-spark">✦</span> Copilot
+          <span class="copilot-sub" id="copilot-sub">on-device</span>
+        </div>
+        <button id="copilot-close" class="copilot-close" type="button" aria-label="Close">×</button>
+      </header>
+      <div id="copilot-log" class="copilot-log"></div>
+      <form id="copilot-form" class="copilot-input">
+        <input
+          id="copilot-text"
+          type="text"
+          autocomplete="off"
+          placeholder="Ask about your time…"
+          aria-label="Message the copilot"
+        />
+        <button type="submit" class="copilot-send" aria-label="Send">→</button>
+      </form>
+    </aside>
+
+    <div class="page">
     <header class="topbar">
       <div class="brand">
         <span class="wordmark">vtx-track</span>
@@ -83,8 +106,8 @@
         <div id="matrix-chart" class="matrix-wrap"></div>
       </section>
 
-      <!-- Row 4: apps + category donut + focus gauge -->
-      <section class="bento bento-3">
+      <!-- Row 4: by app (tall) | category + focus + AI insights stacked -->
+      <section class="bento bento-split">
         <div class="card">
           <div class="card-head">
             <h2>By app</h2>
@@ -92,30 +115,30 @@
           </div>
           <div id="summary-app" class="card-body"></div>
         </div>
-        <div class="card">
-          <div class="card-head">
-            <h2>By category</h2>
+        <div class="split-col">
+          <div class="split-row">
+            <div class="card">
+              <div class="card-head">
+                <h2>By category</h2>
+              </div>
+              <div id="summary-category" class="card-body donut-wrap"></div>
+            </div>
+            <div class="card">
+              <div class="card-head">
+                <h2>Focus score</h2>
+                <span class="card-meta" id="focus-meta"></span>
+              </div>
+              <div id="focus-gauge" class="card-body gauge-wrap"></div>
+            </div>
           </div>
-          <div id="summary-category" class="card-body donut-wrap"></div>
-        </div>
-        <div class="card">
-          <div class="card-head">
-            <h2>Focus score</h2>
-            <span class="card-meta" id="focus-meta"></span>
+          <div class="card card-ai">
+            <div class="card-head">
+              <h2><span class="ai-spark">✦</span> AI insights</h2>
+              <span class="card-meta" id="ai-meta">on-device</span>
+            </div>
+            <div id="ai-insights" class="card-body ai-body"></div>
           </div>
-          <div id="focus-gauge" class="card-body gauge-wrap"></div>
         </div>
-      </section>
-
-      <!-- Row 5: AI insights -->
-      <section class="card card-wide card-ai">
-        <div class="card-head">
-          <h2>
-            <span class="ai-spark">✦</span> AI insights
-          </h2>
-          <span class="card-meta" id="ai-meta">on-device</span>
-        </div>
-        <div id="ai-insights" class="card-body ai-body"></div>
       </section>
 
       <!-- Row 6: timeline -->
@@ -159,6 +182,13 @@
       Local-first · nothing leaves your machine. Built by
       <a href="https://vtxlabs.dev">VTX Labs</a>.
     </footer>
+    </div><!-- /.page -->
+
+    <!-- Floating trigger to open the copilot rail -->
+    <button id="copilot-fab" class="copilot-fab" type="button" aria-label="Ask the AI copilot">
+      <span class="copilot-fab-spark">✦</span>
+      <span class="copilot-fab-label">Ask</span>
+    </button>
 
     <script type="module" src="./app.js"></script>
   </body>

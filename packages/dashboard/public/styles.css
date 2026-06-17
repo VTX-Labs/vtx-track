@@ -760,9 +760,30 @@ body::before {
   grid-template-columns: 1.3fr 1fr 1fr;
 }
 
+/* By App (tall) beside a stacked right column — packs the whitespace. */
+.bento-split {
+  grid-template-columns: 1.15fr 1.85fr;
+  align-items: start;
+}
+
+.split-col {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  min-width: 0;
+}
+
+.split-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 22px;
+}
+
 @media (max-width: 920px) {
   .bento-top,
-  .bento-3 {
+  .bento-3,
+  .bento-split,
+  .split-row {
     grid-template-columns: 1fr;
   }
 }
@@ -1059,13 +1080,162 @@ body::before {
 
 .ai-body {
   min-height: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
-.ai-text {
-  margin: 0;
-  font-size: 15px;
-  line-height: 1.6;
+.ai-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.ai-headline {
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
   color: var(--text);
+}
+
+.ai-vibe {
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 4px 11px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.ai-vibe[data-vibe="deep-focus"] {
+  background: rgba(56, 161, 105, 0.14);
+  color: #2f8a5b;
+}
+.ai-vibe[data-vibe="steady"] {
+  background: rgba(49, 130, 206, 0.14);
+  color: var(--brand);
+}
+.ai-vibe[data-vibe="scattered"] {
+  background: rgba(221, 107, 32, 0.16);
+  color: #c05f1c;
+}
+
+.ai-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  align-items: start;
+}
+
+.ai-spotlight {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+}
+
+.ai-spot-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 9px;
+  font-size: 16px;
+}
+
+.ai-spot-label {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--faint);
+}
+
+.ai-spot-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.ai-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.ai-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text);
+  padding: 10px 13px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-left-width: 3px;
+}
+.ai-card[data-kind="win"] {
+  border-left-color: #38a169;
+}
+.ai-card[data-kind="watch"] {
+  border-left-color: var(--warn);
+}
+.ai-card[data-kind="tip"] {
+  border-left-color: var(--brand);
+}
+
+.ai-card-icon {
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.5;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.ai-card[data-kind="win"] .ai-card-icon {
+  background: rgba(56, 161, 105, 0.16);
+  color: #2f8a5b;
+}
+.ai-card[data-kind="watch"] .ai-card-icon {
+  background: rgba(221, 107, 32, 0.16);
+  color: #c05f1c;
+}
+.ai-card[data-kind="tip"] .ai-card-icon {
+  background: var(--brand-soft);
+  color: var(--brand);
+}
+
+.ai-action {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  font-size: 14px;
+  color: var(--text);
+  background: linear-gradient(120deg, var(--brand-soft), transparent);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: 11px 14px;
+}
+
+.ai-action-tag {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #fff;
+  background: var(--brand);
+  padding: 3px 9px;
+  border-radius: 6px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .ai-thinking {
@@ -1089,6 +1259,373 @@ body::before {
   25% { content: "·"; }
   50% { content: "··"; }
   75% { content: "···"; }
+}
+
+/* ── AI copilot: FAB + slide-out drawer ── */
+
+.copilot-fab {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 40;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font: inherit;
+  font-weight: 700;
+  font-size: 14px;
+  color: #fff;
+  background: linear-gradient(135deg, var(--brand), var(--brand-strong));
+  border: 0;
+  border-radius: 999px;
+  padding: 13px 20px;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(49, 130, 206, 0.4);
+  transition: transform 0.16s ease, box-shadow 0.16s ease;
+}
+
+.copilot-fab:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgba(49, 130, 206, 0.5);
+}
+
+.copilot-fab-spark {
+  font-size: 16px;
+}
+
+/* The copilot docks as an inline left rail. body becomes a flex row; the rail
+   animates its width from 0 → fixed, pushing the page rather than overlaying. */
+body {
+  display: flex;
+  align-items: stretch;
+}
+
+.page {
+  flex: 1;
+  min-width: 0;
+}
+
+.copilot {
+  flex: 0 0 0;
+  width: 0;
+  overflow: hidden;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  transition: flex-basis 0.26s cubic-bezier(0.4, 0, 0.2, 1),
+    width 0.26s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
+}
+
+body.copilot-open .copilot {
+  flex-basis: min(420px, 90vw);
+  width: min(420px, 90vw);
+  opacity: 1;
+  box-shadow: 8px 0 32px rgba(8, 12, 20, 0.16);
+}
+
+/* On narrow screens the rail overlays instead of squeezing the page. */
+@media (max-width: 760px) {
+  .copilot {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 46;
+    height: 100%;
+  }
+}
+
+.copilot-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.copilot-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--text);
+}
+
+.copilot-sub {
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--faint);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.copilot-close {
+  font: inherit;
+  font-size: 22px;
+  line-height: 1;
+  color: var(--muted);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.copilot-close:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.copilot-log {
+  flex: 1;
+  overflow-y: auto;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.chat-turn {
+  display: flex;
+}
+
+.chat-user {
+  justify-content: flex-end;
+}
+
+.chat-user .chat-bubble {
+  background: linear-gradient(135deg, var(--brand), var(--brand-strong));
+  color: #fff;
+  border-bottom-right-radius: 4px;
+}
+
+.chat-assistant .chat-bubble {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-bottom-left-radius: 4px;
+}
+
+.chat-bubble {
+  max-width: 88%;
+  border-radius: 14px;
+  padding: 11px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.chat-text {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.chat-trace {
+  font-size: 12px;
+  color: var(--faint);
+  font-style: italic;
+  padding-left: 4px;
+}
+
+/* Chat components */
+.chat-stat {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+}
+
+.chat-stat-val {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.chat-stat-label {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.chat-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.chat-bars-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--faint);
+  font-weight: 600;
+}
+
+.chat-bar-row {
+  display: grid;
+  grid-template-columns: 90px 1fr auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.chat-bar-label {
+  font-size: 12px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chat-bar-track {
+  background: var(--track);
+  border-radius: 5px;
+  height: 8px;
+  overflow: hidden;
+}
+
+.chat-bar-fill {
+  height: 100%;
+  border-radius: 5px;
+  min-width: 3px;
+}
+
+.chat-bar-val {
+  font-size: 11px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.chat-applist {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.chat-app-row {
+  display: grid;
+  grid-template-columns: 26px 1fr auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.chat-app-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  font-size: 11px;
+}
+
+.chat-app-main {
+  min-width: 0;
+}
+
+.chat-app-name {
+  font-size: 12.5px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chat-app-main .chat-bar-track {
+  margin-top: 4px;
+}
+
+.chat-app-val {
+  font-size: 11px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.chat-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.chat-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 4px 11px;
+  color: var(--text);
+}
+
+.chat-chip-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.chat-callout {
+  font-size: 13px;
+  line-height: 1.5;
+  border-radius: var(--radius-sm);
+  padding: 9px 12px;
+  border-left: 3px solid var(--brand);
+  background: var(--surface);
+}
+.chat-callout[data-tone="good"] {
+  border-left-color: #38a169;
+}
+.chat-callout[data-tone="warn"] {
+  border-left-color: var(--warn);
+}
+
+.copilot-input {
+  display: flex;
+  gap: 8px;
+  padding: 14px 16px;
+  border-top: 1px solid var(--border);
+}
+
+.copilot-input input {
+  flex: 1;
+  font: inherit;
+  font-size: 14px;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 13px;
+  outline: none;
+  transition: border-color 0.14s ease, box-shadow 0.14s ease;
+}
+
+.copilot-input input:focus {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px var(--brand-soft);
+}
+
+.copilot-send {
+  font: inherit;
+  font-size: 18px;
+  color: #fff;
+  background: var(--brand);
+  border: 0;
+  border-radius: 10px;
+  width: 44px;
+  cursor: pointer;
+  transition: background 0.14s ease;
+}
+
+.copilot-send:hover {
+  background: var(--brand-strong);
 }
 
 /* uPlot color overrides for legibility in both themes. */

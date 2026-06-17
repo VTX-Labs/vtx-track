@@ -25,7 +25,10 @@ import {
   startOfDay,
   toDateString,
 } from "./format.js";
-import { aiInsight } from "./ai.js";
+import { aiInsight, computedInsight } from "./ai.js";
+import type { Insight, InsightCard } from "./ai.js";
+import { askCopilot, chatAvailable } from "./chat.js";
+import type { AgentTool, ChatComponent } from "./chat.js";
 
 /** The three range presets the switcher offers. */
 type RangePreset = "today" | "7d" | "30d";
@@ -629,10 +632,14 @@ function renderApps(report: SummaryReport | null): void {
       img.alt = "";
       img.loading = "lazy";
       // If the icon 404s for any reason, fall back to the letter badge.
-      img.addEventListener("error", () => {
-        img.remove();
-        badge.textContent = initials(name);
-      });
+      img.addEventListener(
+        "error",
+        () => {
+          img.remove();
+          badge.textContent = initials(name);
+        },
+        { once: true },
+      );
       badge.appendChild(img);
     } else {
       badge.textContent = initials(name);
@@ -863,14 +870,105 @@ function renderAiLoading(): void {
   host.appendChild(p);
 }
 
-function renderAiResult(text: string, source: "model" | "computed"): void {
+const VIBE_LABEL: Record<Insight["vibe"], string> = {
+  "deep-focus": "Deep focus",
+  steady: "Steady",
+  scattered: "Scattered",
+};
+const CARD_ICON: Record<InsightCard["kind"], string> = {
+  win: "▲",
+  watch: "!",
+  tip: "✦",
+};
+
+/** Render the structured insight as rich components (header, cards, spotlight, action). */
+function renderAiResult(insight: Insight, source: "model" | "computed"): void {
   const host = el("ai-insights");
   clear(host);
   el("ai-meta").textContent = source === "model" ? "on-device · Gemini Nano" : "computed";
-  const p = document.createElement("p");
-  p.className = "ai-text";
-  p.textContent = text;
-  host.appendChild(p);
+
+  // Header: headline + a vibe chip.
+  const header = document.createElement("div");
+  header.className = "ai-header";
+  const headline = document.createElement("div");
+  headline.className = "ai-headline";
+  headline.textContent = insight.headline;
+  const vibe = document.createElement("span");
+  vibe.className = "ai-vibe";
+  vibe.dataset.vibe = insight.vibe;
+  vibe.textContent = VIBE_LABEL[insight.vibe];
+  header.append(headline, vibe);
+  host.appendChild(header);
+
+  // Body: spotlight app (with real icon) + insight cards.
+  const body = document.createElement("div");
+  body.className = "ai-grid";
+
+  if (insight.spotlightApp) {
+    const spot = document.createElement("div");
+    spot.className = "ai-spotlight";
+    const name = insight.spotlightApp;
+    const badge = document.createElement("div");
+    badge.className = "appicon ai-spot-icon";
+    badge.style.background = colorFor(name, 0);
+    if (iconApps.has(name)) {
+      const img = document.createElement("img");
+      img.src = client.iconUrl(name);
+      img.alt = "";
+      img.addEventListener(
+        "error",
+        () => {
+          img.remove();
+          badge.textContent = initials(name);
+        },
+        { once: true },
+      );
+      badge.appendChild(img);
+    } else {
+      badge.textContent = initials(name);
+    }
+    const spotText = document.createElement("div");
+    const spotLabel = document.createElement("div");
+    spotLabel.className = "ai-spot-label";
+    spotLabel.textContent = "Spotlight";
+    const spotName = document.createElement("div");
+    spotName.className = "ai-spot-name";
+    spotName.textContent = name;
+    spotText.append(spotLabel, spotName);
+    spot.append(badge, spotText);
+    body.appendChild(spot);
+  }
+
+  const cards = document.createElement("div");
+  cards.className = "ai-cards";
+  for (const card of insight.cards) {
+    const c = document.createElement("div");
+    c.className = "ai-card";
+    c.dataset.kind = card.kind;
+    const icon = document.createElement("span");
+    icon.className = "ai-card-icon";
+    icon.textContent = CARD_ICON[card.kind];
+    const txt = document.createElement("span");
+    txt.className = "ai-card-text";
+    txt.textContent = card.text;
+    c.append(icon, txt);
+    cards.appendChild(c);
+  }
+  body.appendChild(cards);
+  host.appendChild(body);
+
+  // Action callout.
+  if (insight.action) {
+    const action = document.createElement("div");
+    action.className = "ai-action";
+    const tag = document.createElement("span");
+    tag.className = "ai-action-tag";
+    tag.textContent = "Try this";
+    const txt = document.createElement("span");
+    txt.textContent = insight.action;
+    action.append(tag, txt);
+    host.appendChild(action);
+  }
 }
 
 /** Build the compact stats the insight is generated from. */
@@ -902,10 +1000,42 @@ function insightFacts(
 
 // ── Orchestration ────────────────────────────────────────────────────────────
 
-async function refresh(): Promise<void> {
+/** Why a refresh is running — controls whether the (expensive) AI insight reruns. */
+type RefreshReason = "initial" | "range" | "interval" | "resize";
+
+/** Re-entrancy guard so overlapping refreshes can't stack or destroy mid-render. */
+let refreshing = false;
+let pendingReason: RefreshReason | null = null;
+
+/**
+ * Refresh the dashboard. The on-device AI insight is only (re)generated on
+ * meaningful events — initial load, a range switch, or an explicit request —
+ * never on the periodic interval or on resize. On-device inference is heavy
+ * (seconds of main-thread work), so running it every 60s froze the tab.
+ */
+async function refresh(reason: RefreshReason = "interval"): Promise<void> {
+  // Coalesce concurrent calls: remember the "strongest" reason and run once.
+  if (refreshing) {
+    if (reason === "initial" || reason === "range") pendingReason = reason;
+    return;
+  }
+  refreshing = true;
+  try {
+    await doRefresh(reason);
+  } finally {
+    refreshing = false;
+    if (pendingReason) {
+      const next = pendingReason;
+      pendingReason = null;
+      void refresh(next);
+    }
+  }
+}
+
+async function doRefresh(reason: RefreshReason): Promise<void> {
   const range = rangeFor(activePreset);
   destroyCharts();
-  const myAiToken = ++aiToken;
+  const runAi = reason === "initial" || reason === "range";
 
   // Health first — drives offline/Wayland states and never blocks reports.
   let health: HealthStatus | null = null;
@@ -952,9 +1082,13 @@ async function refresh(): Promise<void> {
   guard("timeline", () => renderTimeline(segments, range));
   guard("standup", () => renderStandup(standup));
 
-  // AI insight: fire-and-forget so it never blocks the dashboard. Guarded by
-  // the refresh token so a stale call can't overwrite a newer one.
-  void runAiInsight(myAiToken, byApp, byCategory, focus);
+  // AI insight: only on load/range change. Fire-and-forget; token-guarded so a
+  // stale call can't overwrite a newer one. On interval/resize we keep the last
+  // insight rather than re-running the model.
+  if (runAi) {
+    const myAiToken = ++aiToken;
+    void runAiInsight(myAiToken, byApp, byCategory, focus);
+  }
 
   // Project/language need the VS Code extension; render after the core view.
   const [byProject, byLanguage] = await Promise.all([
@@ -974,15 +1108,26 @@ async function runAiInsight(
   if (token !== aiToken) return;
   const facts = insightFacts(byApp, byCategory, focus);
   if (facts.totalMs <= 0) {
-    if (token === aiToken) renderAiResult("No activity tracked yet for this range.", "computed");
+    if (token === aiToken) {
+      renderAiResult(
+        {
+          headline: "Nothing tracked yet",
+          vibe: "steady",
+          cards: [{ kind: "tip", text: "Start working and insights will appear here." }],
+          spotlightApp: null,
+          action: "",
+        },
+        "computed",
+      );
+    }
     return;
   }
   renderAiLoading();
   try {
-    const { text, source } = await aiInsight(facts, presetLabel(activePreset));
-    if (token === aiToken) renderAiResult(text, source);
+    const { insight, source } = await aiInsight(facts, presetLabel(activePreset));
+    if (token === aiToken) renderAiResult(insight, source);
   } catch {
-    if (token === aiToken) renderAiResult(computedFallback(facts), "computed");
+    if (token === aiToken) renderAiResult(computedInsight(facts), "computed");
   }
 }
 
@@ -999,24 +1144,6 @@ function renderStandup(standup: StandupReport | null): void {
   pre.className = "standup";
   pre.textContent = standup.markdown;
   container.appendChild(pre);
-}
-
-/** A deterministic, no-model insight used when on-device AI is unavailable. */
-function computedFallback(facts: ReturnType<typeof insightFacts>): string {
-  const top = facts.topApps[0];
-  const cat = facts.topCategories[0];
-  const parts: string[] = [];
-  parts.push(`You tracked ${formatDuration(facts.totalMs)}.`);
-  if (top) parts.push(`${top.name} led at ${formatPercent(top.share)}.`);
-  if (cat) parts.push(`Most time fell under "${cat.name}".`);
-  if (facts.focus) {
-    parts.push(
-      facts.focus.switchesPerHour > 20
-        ? `Context switching was high (${facts.focus.switchesPerHour.toFixed(0)}/hr) — try longer focus blocks.`
-        : `Your longest deep-work stretch was ${formatDuration(facts.focus.longestDeepWorkMs)}.`,
-    );
-  }
-  return parts.join(" ");
 }
 
 /**
@@ -1040,6 +1167,357 @@ async function safe<T>(fn: () => Promise<T>): Promise<T | null> {
   }
 }
 
+// ── AI copilot (slide-out chat with tool-calling) ────────────────────────────
+
+/** Parse a human range word into a {from,to}. Defaults to today. */
+function parseRange(word: unknown): Range {
+  const w = String(word ?? "today").toLowerCase();
+  if (w === "7d" || w === "week" || w === "7days" || w.includes("7")) return rangeFor("7d");
+  if (w === "30d" || w === "month" || w === "30days" || w.includes("30")) return rangeFor("30d");
+  return rangeFor("today");
+}
+
+/** Tools the copilot can call — each fetches real numbers from the daemon. */
+function copilotTools(): AgentTool[] {
+  return [
+    {
+      name: "get_summary",
+      description: "Time grouped by app, category, project, language, or branch for a range.",
+      args: {
+        range: '"today" | "7d" | "30d"',
+        by: '"app" | "category" | "project" | "language" | "branch"',
+      },
+      async run(args) {
+        const by = (["app", "category", "project", "language", "branch"].includes(String(args.by))
+          ? args.by
+          : "app") as "app" | "category" | "project" | "language" | "branch";
+        const r = await client.summary(parseRange(args.range), by);
+        return {
+          totalMs: r.totalMs,
+          total: formatDuration(r.totalMs),
+          rows: r.rows.slice(0, 8).map((row) => ({
+            key: row.key,
+            duration: formatDuration(row.durationMs),
+            ms: row.durationMs,
+            pct: Math.round(row.share * 100),
+          })),
+        };
+      },
+    },
+    {
+      name: "get_focus",
+      description: "Focus metrics for today: active time, context switches/hr, deep-work streak.",
+      args: {},
+      async run() {
+        const f = await client.focus(toDateString(new Date()));
+        return {
+          activeTime: formatDuration(f.totalActiveMs),
+          contextSwitches: f.contextSwitches,
+          switchesPerHour: Math.round(f.switchesPerHour * 10) / 10,
+          longestDeepWork: formatDuration(f.longestDeepWorkMs),
+          deepWorkSessions: f.deepWorkSessions,
+          focusScore: focusScore(f),
+        };
+      },
+    },
+    {
+      name: "get_standup",
+      description: "Today's generated standup summary (markdown).",
+      args: {},
+      async run() {
+        const s = await client.standup(toDateString(new Date()));
+        return { markdown: s.markdown };
+      },
+    },
+  ];
+}
+
+interface ChatTurn {
+  role: "user" | "assistant" | "trace";
+  text: string;
+  components?: ChatComponent[];
+}
+
+const chatHistory: ChatTurn[] = [];
+let chatBusy = false;
+let copilotReady = false;
+
+function openCopilot(): void {
+  // The rail docks as inline content: a class on <body> shifts the page and
+  // expands the rail (no overlay, no scrim).
+  document.body.classList.add("copilot-open");
+  el("copilot").setAttribute("aria-hidden", "false");
+  if (chatHistory.length === 0) {
+    pushChat({
+      role: "assistant",
+      text: copilotReady
+        ? "Hi! Ask me anything about your tracked time — what you focused on, where time went, how to improve."
+        : "On-device AI isn't available in this browser, so I'll answer from your live stats where I can. (Chrome 138+ with Gemini Nano enables full chat.)",
+    });
+  }
+  window.setTimeout(() => el<HTMLInputElement>("copilot-text").focus(), 280);
+}
+
+function closeCopilot(): void {
+  document.body.classList.remove("copilot-open");
+  el("copilot").setAttribute("aria-hidden", "true");
+}
+
+/** Cap the chat transcript so a very long session can't grow memory/DOM forever. */
+const MAX_CHAT_TURNS = 60;
+
+function pushChat(turn: ChatTurn): void {
+  chatHistory.push(turn);
+  renderChatTurn(turn);
+  if (chatHistory.length > MAX_CHAT_TURNS) {
+    chatHistory.splice(0, chatHistory.length - MAX_CHAT_TURNS);
+    const log = el("copilot-log");
+    while (log.childElementCount > MAX_CHAT_TURNS) log.removeChild(log.firstChild as Node);
+  }
+}
+
+function renderChatTurn(turn: ChatTurn): void {
+  const log = el("copilot-log");
+  const row = document.createElement("div");
+  row.className = `chat-turn chat-${turn.role}`;
+
+  if (turn.role === "trace") {
+    row.textContent = turn.text;
+  } else {
+    const bubble = document.createElement("div");
+    bubble.className = "chat-bubble";
+    if (turn.text) {
+      const p = document.createElement("p");
+      p.className = "chat-text";
+      p.textContent = turn.text;
+      bubble.appendChild(p);
+    }
+    for (const c of turn.components ?? []) bubble.appendChild(renderChatComponent(c));
+    row.appendChild(bubble);
+  }
+  log.appendChild(row);
+  log.scrollTop = log.scrollHeight;
+}
+
+function renderChatComponent(c: ChatComponent): HTMLElement {
+  if (c.type === "stat") {
+    const box = document.createElement("div");
+    box.className = "chat-stat";
+    const v = document.createElement("div");
+    v.className = "chat-stat-val";
+    v.textContent = c.value;
+    const l = document.createElement("div");
+    l.className = "chat-stat-label";
+    l.textContent = c.hint ? `${c.label} · ${c.hint}` : c.label;
+    box.append(v, l);
+    return box;
+  }
+  if (c.type === "bars") {
+    const box = document.createElement("div");
+    box.className = "chat-bars";
+    if (c.title) {
+      const t = document.createElement("div");
+      t.className = "chat-bars-title";
+      t.textContent = c.title;
+      box.appendChild(t);
+    }
+    const peak = Math.max(1, ...c.items.map((i) => i.value));
+    c.items.forEach((it, i) => {
+      const row = document.createElement("div");
+      row.className = "chat-bar-row";
+      const label = document.createElement("span");
+      label.className = "chat-bar-label";
+      label.textContent = it.label;
+      const track = document.createElement("div");
+      track.className = "chat-bar-track";
+      const fill = document.createElement("div");
+      fill.className = "chat-bar-fill";
+      fill.style.width = `${Math.max(3, (it.value / peak) * 100)}%`;
+      fill.style.background = colorFor(it.label, i);
+      track.appendChild(fill);
+      const val = document.createElement("span");
+      val.className = "chat-bar-val";
+      val.textContent = it.display;
+      row.append(label, track, val);
+      box.appendChild(row);
+    });
+    return box;
+  }
+  if (c.type === "applist") {
+    const box = document.createElement("div");
+    box.className = "chat-applist";
+    if (c.title) {
+      const t = document.createElement("div");
+      t.className = "chat-bars-title";
+      t.textContent = c.title;
+      box.appendChild(t);
+    }
+    const peak = Math.max(1, ...c.items.map((i) => i.value));
+    c.items.forEach((it, i) => {
+      const name = it.app || "Unknown";
+      const row = document.createElement("div");
+      row.className = "chat-app-row";
+
+      const badge = document.createElement("div");
+      badge.className = "appicon chat-app-icon";
+      badge.style.background = colorFor(name, i);
+      if (iconApps.has(name)) {
+        const img = document.createElement("img");
+        img.src = client.iconUrl(name);
+        img.alt = "";
+        img.addEventListener(
+          "error",
+          () => {
+            img.remove();
+            badge.textContent = initials(name);
+          },
+          { once: true },
+        );
+        badge.appendChild(img);
+      } else {
+        badge.textContent = initials(name);
+      }
+
+      const main = document.createElement("div");
+      main.className = "chat-app-main";
+      const nm = document.createElement("div");
+      nm.className = "chat-app-name";
+      nm.textContent = name;
+      nm.title = name;
+      const track = document.createElement("div");
+      track.className = "chat-bar-track";
+      const fill = document.createElement("div");
+      fill.className = "chat-bar-fill";
+      fill.style.width = `${Math.max(3, (it.value / peak) * 100)}%`;
+      fill.style.background = colorFor(name, i);
+      track.appendChild(fill);
+      main.append(nm, track);
+
+      const val = document.createElement("span");
+      val.className = "chat-app-val";
+      val.textContent = it.display;
+
+      row.append(badge, main, val);
+      box.appendChild(row);
+    });
+    return box;
+  }
+  if (c.type === "chips") {
+    const box = document.createElement("div");
+    box.className = "chat-chips";
+    c.items.forEach((name, i) => {
+      const chip = document.createElement("span");
+      chip.className = "chat-chip";
+      const dot = document.createElement("span");
+      dot.className = "chat-chip-dot";
+      dot.style.background = colorFor(name, i);
+      chip.append(dot, document.createTextNode(name));
+      box.appendChild(chip);
+    });
+    return box;
+  }
+  // callout
+  const box = document.createElement("div");
+  box.className = "chat-callout";
+  box.dataset.tone = c.tone;
+  box.textContent = c.text;
+  return box;
+}
+
+async function submitChat(question: string): Promise<void> {
+  if (chatBusy || !question.trim()) return;
+  chatBusy = true;
+  pushChat({ role: "user", text: question.trim() });
+
+  const thinking = document.createElement("div");
+  thinking.className = "chat-turn chat-trace";
+  thinking.textContent = "thinking…";
+  el("copilot-log").appendChild(thinking);
+
+  try {
+    if (!copilotReady) {
+      // No on-device model: answer the most common asks from live stats.
+      const fallback = await copilotFallback(question);
+      thinking.remove();
+      pushChat({ role: "assistant", ...fallback });
+      return;
+    }
+    const answer = await askCopilot(question, copilotTools(), {
+      onToolCall: (name) => {
+        thinking.textContent = `checking ${name.replace(/_/g, " ")}…`;
+      },
+    });
+    thinking.remove();
+    pushChat({ role: "assistant", text: answer.text, components: answer.components });
+  } catch {
+    thinking.remove();
+    const fallback = await copilotFallback(question);
+    pushChat({ role: "assistant", ...fallback });
+  } finally {
+    chatBusy = false;
+  }
+}
+
+/** Deterministic answers when the on-device model is unavailable. */
+async function copilotFallback(question: string): Promise<{ text: string; components: ChatComponent[] }> {
+  const q = question.toLowerCase();
+  try {
+    if (q.includes("focus") || q.includes("switch") || q.includes("deep")) {
+      const f = await client.focus(toDateString(new Date()));
+      return {
+        text: `Today you had ${f.contextSwitches} context switches (${f.switchesPerHour.toFixed(1)}/hr) and a longest deep-work stretch of ${formatDuration(f.longestDeepWorkMs)}.`,
+        components: [
+          { type: "stat", label: "Focus score", value: String(focusScore(f)), hint: scoreLabel(focusScore(f)) },
+        ],
+      };
+    }
+    const by = q.includes("categor") ? "category" : "app";
+    const range = q.includes("week") || q.includes("7") ? rangeFor("7d") : q.includes("month") || q.includes("30") ? rangeFor("30d") : rangeFor("today");
+    const sum = await client.summary(range, by);
+    return {
+      text: `You tracked ${formatDuration(sum.totalMs)}. Top ${by === "category" ? "categories" : "apps"}:`,
+      components: [
+        {
+          type: "bars",
+          items: sum.rows.slice(0, 5).map((r) => ({
+            label: r.key || "Unknown",
+            value: r.durationMs,
+            display: `${formatDuration(r.durationMs)} · ${formatPercent(r.share)}`,
+          })),
+        },
+      ],
+    };
+  } catch {
+    return { text: "I couldn't reach the daemon to answer that.", components: [] };
+  }
+}
+
+function wireCopilot(): void {
+  void chatAvailable().then((ready) => {
+    copilotReady = ready;
+    const sub = document.getElementById("copilot-sub");
+    if (sub) sub.textContent = ready ? "on-device · Gemini Nano" : "stats mode";
+  });
+
+  el("copilot-fab").addEventListener("click", () => {
+    if (document.body.classList.contains("copilot-open")) closeCopilot();
+    else openCopilot();
+  });
+  el("copilot-close").addEventListener("click", closeCopilot);
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && document.body.classList.contains("copilot-open")) closeCopilot();
+  });
+
+  const form = el<HTMLFormElement>("copilot-form");
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const input = el<HTMLInputElement>("copilot-text");
+    const q = input.value;
+    input.value = "";
+    void submitChat(q);
+  });
+}
+
 // ── Wiring ───────────────────────────────────────────────────────────────────
 
 function wireRangeSwitcher(): void {
@@ -1052,7 +1530,7 @@ function wireRangeSwitcher(): void {
       if (!preset) return;
       activePreset = preset;
       for (const b of buttons) b.classList.toggle("active", b === btn);
-      void refresh();
+      void refresh("range");
     });
   }
 }
@@ -1076,18 +1554,37 @@ function wireStandupCopy(): void {
 }
 
 function start(): void {
-  wireRangeSwitcher();
-  wireStandupCopy();
-  void refresh();
+  // Each wiring step is isolated: a missing optional element must never abort
+  // the whole dashboard (that previously left every panel blank).
+  guard("wire-range", wireRangeSwitcher);
+  guard("wire-standup", wireStandupCopy);
+  guard("wire-copilot", wireCopilot);
+  void refresh("initial");
 
   let resizeTimer = 0;
   window.addEventListener("resize", () => {
     window.clearTimeout(resizeTimer);
-    resizeTimer = window.setTimeout(() => void refresh(), 200);
+    resizeTimer = window.setTimeout(() => void refresh("resize"), 250);
   });
 
-  // Periodic refresh so the dashboard stays live without a manual reload.
-  window.setInterval(() => void refresh(), 60_000);
+  // Periodic refresh so the dashboard stays live without a manual reload. This
+  // re-fetches and re-renders the cheap panels but does NOT re-run the on-device
+  // AI model. Pause while the tab is hidden to avoid background churn.
+  window.setInterval(() => {
+    if (!document.hidden) void refresh("interval");
+  }, 60_000);
+
+  // Stop the live "now" timer while hidden; resume with a fresh render.
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+      if (nowTimer) {
+        window.clearInterval(nowTimer);
+        nowTimer = 0;
+      }
+    } else {
+      void refresh("interval");
+    }
+  });
 }
 
 if (document.readyState === "loading") {
