@@ -18,10 +18,11 @@
  * Each addon is prepared in escalating steps, stopping at the first that
  * produces the binary:
  *   a. run the addon's own `prebuild-install` from its package dir (fast path);
- *   b. (better-sqlite3 only) download the matching prebuilt tarball straight
- *      from GitHub Releases and extract it with the system `tar`. This works
- *      even when `prebuild-install`'s own deps weren't installed — the common
- *      pnpm-isolation failure;
+ *   b. download the matching prebuilt tarball straight from GitHub Releases and
+ *      extract it with the system `tar`. This works even when
+ *      `prebuild-install`'s own deps weren't installed — the common
+ *      pnpm-isolation failure — and even on toolchain-less machines where the
+ *      source build (step c) can't run;
  *   c. compile from source via the addon's gyp script (last resort; needs a
  *      C/C++ toolchain).
  *
@@ -53,8 +54,8 @@ const ABI = process.versions.modules;
  * The native dependencies vtx-track relies on, and how to prepare each.
  *  - `binary`        path (under the package dir) whose presence means "ready".
  *  - `prebuildArgs`  args for the package's own `prebuild-install`.
- *  - `ghRelease`     (better-sqlite3 only) GitHub release-asset descriptor used
- *                    as a network fallback when `prebuild-install` can't run.
+ *  - `ghRelease`     GitHub release-asset descriptor used as a network fallback
+ *                    when `prebuild-install` can't run.
  *  - `sourceScript`  npm script to compile from source if all downloads fail.
  *  - `required`      true if a missing binary is fatal (no graceful fallback).
  */
@@ -76,6 +77,13 @@ const NATIVE_DEPS = [
     name: "@paymoapp/active-window",
     binary: ["build", "Release", "PaymoActiveWindow.node"],
     prebuildArgs: ["-r", "napi"],
+    ghRelease: {
+      repo: "paymo-org/node-active-window",
+      // N-API addon: one binary per platform/arch, independent of Node ABI.
+      // e.g. active-window-v2.1.4-napi-v6-win32-x64.tar.gz
+      asset: (v) =>
+        `active-window-v${v}-napi-v6-${process.platform}-${process.arch}.tar.gz`,
+    },
     sourceScript: "build:gyp",
     required: false,
   },
@@ -83,6 +91,12 @@ const NATIVE_DEPS = [
     name: "@paymoapp/real-idle",
     binary: ["build", "Release", "PaymoRealIdle.node"],
     prebuildArgs: ["-r", "napi"],
+    ghRelease: {
+      repo: "paymo-org/node-real-idle",
+      // e.g. real-idle-v1.1.2-napi-v6-win32-x64.tar.gz
+      asset: (v) =>
+        `real-idle-v${v}-napi-v6-${process.platform}-${process.arch}.tar.gz`,
+    },
     sourceScript: "build:gyp",
     required: false,
   },
