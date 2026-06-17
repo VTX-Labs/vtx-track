@@ -66,7 +66,7 @@ vtx-track is used by **cloning this repo and building from source.** It is *not*
 published to npm, and there are no prebuilt installers or downloads — you run it
 locally from your own checkout.
 
-> Requires **Node ≥ 20** and **pnpm 10.x**.
+> Requires **Node ≥ 22** and **pnpm 10.x**.
 
 ```bash
 git clone https://github.com/VTX-Labs/vtx-track.git

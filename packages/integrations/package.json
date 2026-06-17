@@ -30,7 +30,7 @@
   },
   "types": "./dist/index.d.ts",
   "files": ["dist", "README.md", "LICENSE"],
-  "engines": { "node": ">=20" },
+  "engines": { "node": ">=22" },
   "scripts": {
     "build": "tsup",
     "typecheck": "tsc --noEmit",
