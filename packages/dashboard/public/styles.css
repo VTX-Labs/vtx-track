@@ -694,6 +694,403 @@ body::before {
   text-decoration: underline;
 }
 
+/* ── Card system (bento layout) ── */
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 22px 20px;
+  box-shadow: var(--shadow);
+  transition: box-shadow 0.16s ease;
+}
+
+.card:hover {
+  box-shadow: var(--shadow-hover);
+}
+
+.card-wide {
+  width: 100%;
+}
+
+.card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.card h2 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.card-meta {
+  font-size: 11.5px;
+  color: var(--faint);
+  font-style: italic;
+}
+
+.card-body {
+  min-height: 40px;
+}
+
+.bento {
+  display: grid;
+  gap: 22px;
+}
+
+.bento-top {
+  grid-template-columns: minmax(220px, 0.9fr) minmax(420px, 2.1fr);
+}
+
+.bento-2 {
+  grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+}
+
+.bento-3 {
+  grid-template-columns: 1.3fr 1fr 1fr;
+}
+
+@media (max-width: 920px) {
+  .bento-top,
+  .bento-3 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Live "now" card ── */
+
+.card-now {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: linear-gradient(160deg, var(--surface), var(--surface-2));
+}
+
+.now-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.now-pulse {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--ok);
+  flex-shrink: 0;
+}
+
+.now-pulse[data-kind="ok"] {
+  background: var(--ok);
+  animation: pulse 2.2s ease-out infinite;
+  color: var(--ok);
+}
+.now-pulse[data-kind="idle"] {
+  background: var(--faint);
+}
+.now-pulse[data-kind="off"] {
+  background: var(--offline);
+}
+
+.now-eyebrow {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.13em;
+  color: var(--faint);
+}
+
+.now-app {
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.now-timer {
+  font-size: 34px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--brand);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.now-meta {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+/* ── Hero card (segmented bar + sparkline) ── */
+
+.card-hero {
+  background: linear-gradient(135deg, var(--brand), var(--brand-strong));
+  color: #fff;
+  border: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.card-hero::after {
+  content: "";
+  position: absolute;
+  right: -60px;
+  top: -60px;
+  width: 240px;
+  height: 240px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.16), transparent 70%);
+  pointer-events: none;
+}
+
+.hero-row {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.hero-main {
+  z-index: 1;
+  min-width: 220px;
+  flex: 1;
+}
+
+.hero-eyebrow {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  opacity: 0.85;
+}
+
+.hero-total {
+  font-size: 48px;
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  margin-top: 4px;
+}
+
+.hero-sub {
+  font-size: 13px;
+  opacity: 0.85;
+  margin-top: 2px;
+}
+
+.hero-segbar {
+  display: flex;
+  height: 9px;
+  border-radius: 5px;
+  overflow: hidden;
+  margin-top: 16px;
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.segbar-fill {
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+.hero-legend {
+  display: flex;
+  gap: 16px;
+  margin-top: 9px;
+  flex-wrap: wrap;
+}
+
+.seg-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  opacity: 0.92;
+  font-variant-numeric: tabular-nums;
+}
+
+.seg-legend-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+}
+
+.hero-spark {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: flex-end;
+  min-width: 220px;
+  flex: 1;
+  z-index: 1;
+}
+
+.hero-spark-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  opacity: 0.8;
+  margin-bottom: 6px;
+}
+
+.hero-spark-chart {
+  width: 100%;
+  height: 56px;
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+}
+
+.spark-bar {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.55);
+  border-radius: 2px 2px 0 0;
+  min-height: 2px;
+  transition: height 0.3s ease;
+}
+
+.spark-bar.hot {
+  background: #fff;
+}
+
+/* ── Dot-matrix analytics ── */
+
+.matrix-wrap {
+  width: 100%;
+  overflow: hidden;
+}
+
+.matrix-svg {
+  width: 100%;
+  height: 280px;
+  display: block;
+}
+
+.matrix-axis {
+  fill: var(--faint);
+  font-size: 13px;
+  font-family: var(--font);
+}
+
+.matrix-hit:hover {
+  fill: var(--brand-soft);
+}
+
+/* ── Focus gauge ── */
+
+.gauge-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.gauge-svg {
+  width: 100%;
+  max-width: 240px;
+  height: auto;
+}
+
+.gauge-value {
+  fill: var(--text);
+  font-size: 34px;
+  font-weight: 800;
+  font-family: var(--font);
+  font-variant-numeric: tabular-nums;
+}
+
+.gauge-unit {
+  fill: var(--faint);
+  font-size: 11px;
+  font-family: var(--font);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.gauge-stats {
+  display: flex;
+  gap: 26px;
+  justify-content: center;
+}
+
+.gauge-stat {
+  text-align: center;
+}
+
+.gauge-stat-val {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.gauge-stat-label {
+  font-size: 11px;
+  color: var(--faint);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-top: 1px;
+}
+
+/* ── AI insights ── */
+
+.card-ai {
+  background:
+    radial-gradient(600px 240px at 100% 0%, var(--brand-soft), transparent 70%),
+    var(--surface);
+}
+
+.ai-spark {
+  color: var(--brand);
+  font-size: 13px;
+}
+
+.ai-body {
+  min-height: 28px;
+}
+
+.ai-text {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--text);
+}
+
+.ai-thinking {
+  margin: 0;
+  font-size: 14px;
+  color: var(--muted);
+  position: relative;
+  display: inline-block;
+}
+
+.ai-thinking::after {
+  content: "";
+  display: inline-block;
+  width: 1em;
+  text-align: left;
+  animation: ai-dots 1.2s steps(4, end) infinite;
+}
+
+@keyframes ai-dots {
+  0% { content: ""; }
+  25% { content: "·"; }
+  50% { content: "··"; }
+  75% { content: "···"; }
+}
+
 /* uPlot color overrides for legibility in both themes. */
 .u-title,
 .u-legend {

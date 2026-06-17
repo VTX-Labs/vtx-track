@@ -40,73 +40,118 @@
         tracking still work. See the docs to enable the GNOME/KWin adapter.
       </div>
 
-      <!-- Hero: headline total + live activity sparkline -->
-      <section class="hero">
-        <div class="hero-main">
-          <div class="hero-eyebrow" id="hero-eyebrow">Today</div>
-          <div class="hero-total" id="hero-total">—</div>
-          <div class="hero-sub" id="hero-sub">tracked time</div>
+      <!-- Row 1: live "now" card + hero total with segmented bar -->
+      <section class="bento bento-top">
+        <!-- Live now-tracking card -->
+        <div class="card card-now" id="now-card">
+          <div class="now-head">
+            <span class="now-pulse" id="now-pulse"></span>
+            <span class="now-eyebrow">Now tracking</span>
+          </div>
+          <div class="now-app" id="now-app">—</div>
+          <div class="now-timer" id="now-timer">0:00</div>
+          <div class="now-meta" id="now-meta">idle</div>
         </div>
-        <div class="hero-spark">
-          <div class="hero-spark-label">Activity</div>
-          <div id="hero-sparkline" class="hero-spark-chart"></div>
+
+        <!-- Hero: headline total + segmented focus/idle bar + sparkline -->
+        <div class="card card-hero">
+          <div class="hero-row">
+            <div class="hero-main">
+              <div class="hero-eyebrow" id="hero-eyebrow">Today</div>
+              <div class="hero-total" id="hero-total">—</div>
+              <div class="hero-sub" id="hero-sub">tracked time</div>
+              <div class="hero-segbar" id="hero-segbar" aria-hidden="true"></div>
+              <div class="hero-legend" id="hero-legend"></div>
+            </div>
+            <div class="hero-spark">
+              <div class="hero-spark-label">Activity</div>
+              <div id="hero-sparkline" class="hero-spark-chart"></div>
+            </div>
+          </div>
         </div>
       </section>
 
-      <!-- KPI strip -->
+      <!-- Row 2: KPI strip -->
       <section id="kpi-strip" class="kpi-strip"></section>
 
-      <!-- Apps (with real icons) + category donut -->
-      <section class="grid grid-2">
-        <div class="panel">
-          <div class="panel-head">
-            <h2>By app</h2>
-            <span class="panel-meta" id="app-count"></span>
-          </div>
-          <div id="summary-app" class="panel-body"></div>
+      <!-- Row 3: dot-matrix analytics (full width) -->
+      <section class="card card-wide">
+        <div class="card-head">
+          <h2>Report analytics</h2>
+          <span class="card-meta" id="matrix-meta"></span>
         </div>
-        <div class="panel">
-          <div class="panel-head">
+        <div id="matrix-chart" class="matrix-wrap"></div>
+      </section>
+
+      <!-- Row 4: apps + category donut + focus gauge -->
+      <section class="bento bento-3">
+        <div class="card">
+          <div class="card-head">
+            <h2>By app</h2>
+            <span class="card-meta" id="app-count"></span>
+          </div>
+          <div id="summary-app" class="card-body"></div>
+        </div>
+        <div class="card">
+          <div class="card-head">
             <h2>By category</h2>
           </div>
-          <div id="summary-category" class="panel-body donut-wrap"></div>
+          <div id="summary-category" class="card-body donut-wrap"></div>
+        </div>
+        <div class="card">
+          <div class="card-head">
+            <h2>Focus score</h2>
+            <span class="card-meta" id="focus-meta"></span>
+          </div>
+          <div id="focus-gauge" class="card-body gauge-wrap"></div>
         </div>
       </section>
 
-      <!-- Timeline -->
-      <section class="panel panel-wide">
-        <div class="panel-head">
+      <!-- Row 5: AI insights -->
+      <section class="card card-wide card-ai">
+        <div class="card-head">
+          <h2>
+            <span class="ai-spark">✦</span> AI insights
+          </h2>
+          <span class="card-meta" id="ai-meta">on-device</span>
+        </div>
+        <div id="ai-insights" class="card-body ai-body"></div>
+      </section>
+
+      <!-- Row 6: timeline -->
+      <section class="card card-wide">
+        <div class="card-head">
           <h2>Timeline</h2>
-          <span class="panel-meta" id="timeline-meta"></span>
+          <span class="card-meta" id="timeline-meta"></span>
         </div>
-        <div id="timeline-chart" class="panel-body chart"></div>
+        <div id="timeline-chart" class="card-body chart"></div>
       </section>
 
-      <!-- Projects + languages -->
-      <section class="grid grid-2">
-        <div class="panel">
-          <div class="panel-head">
+      <!-- Row 7: projects + languages -->
+      <section class="bento bento-2">
+        <div class="card">
+          <div class="card-head">
             <h2>Top projects</h2>
-            <span class="panel-meta">needs the VS Code extension</span>
+            <span class="card-meta">needs the VS Code extension</span>
           </div>
-          <div id="summary-project" class="panel-body"></div>
+          <div id="summary-project" class="card-body"></div>
         </div>
-        <div class="panel">
-          <div class="panel-head">
+        <div class="card">
+          <div class="card-head">
             <h2>Top languages</h2>
-            <span class="panel-meta">needs the VS Code extension</span>
+            <span class="card-meta">needs the VS Code extension</span>
           </div>
-          <div id="summary-language" class="panel-body"></div>
+          <div id="summary-language" class="card-body"></div>
         </div>
       </section>
 
-      <!-- Standup -->
-      <section class="panel panel-wide">
-        <div class="panel-head">
+      <!-- Row 8: standup -->
+      <section class="card card-wide">
+        <div class="card-head">
           <h2>Standup preview</h2>
           <button id="standup-copy" class="ghost-btn" type="button">Copy</button>
         </div>
-        <div id="standup-preview" class="panel-body"></div>
+        <div id="standup-preview" class="card-body"></div>
       </section>
     </main>
 

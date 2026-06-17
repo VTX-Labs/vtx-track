@@ -2,10 +2,13 @@
  * vtx-track dashboard — client app.
  *
  * No framework: a set of fetch + render functions wired to the daemon's
- * localhost HTTP API. The timeline uses uPlot; everything else is hand-rolled
- * DOM (crisp, accessible, theme-aware). Real app icons come from the daemon's
- * `/icon` endpoint, with a generated letter-badge fallback. Everything runs
- * against 127.0.0.1; if the daemon is offline we show a friendly empty state.
+ * localhost HTTP API. The timeline uses uPlot; the dot-matrix analytics, focus
+ * gauge, segmented hero bar, and live "now" card are hand-rolled SVG/DOM
+ * (crisp, accessible, theme-aware). Real app icons come from the daemon's
+ * `/icon` endpoint, with a generated letter-badge fallback. AI insights run on
+ * Chrome's built-in on-device model when available (nothing leaves the
+ * machine), degrading to a computed summary otherwise. Everything runs against
+ * 127.0.0.1; if the daemon is offline we show a friendly empty state.
  */
 import uPlot from "uplot";
 import { DaemonClient, DaemonOfflineError } from "@vtx-track/protocol";
@@ -22,6 +25,7 @@ import {
   startOfDay,
   toDateString,
 } from "./format.js";
+import { aiInsight } from "./ai.js";
 
 /** The three range presets the switcher offers. */
 type RangePreset = "today" | "7d" | "30d";
@@ -43,6 +47,7 @@ const PALETTE = [
   "#e53e3e",
   "#718096",
 ];
+const SVG_NS = "http://www.w3.org/2000/svg";
 
 const client = new DaemonClient({ baseUrl: window.location.origin });
 
@@ -52,6 +57,10 @@ const charts: uPlot[] = [];
 let iconApps = new Set<string>();
 /** Latest standup markdown, for the Copy button. */
 let lastStandupMarkdown = "";
+/** Handle for the live "now" timer interval, cleared on each refresh. */
+let nowTimer = 0;
+/** Guards the AI insight call so it runs once per data refresh, not per tick. */
+let aiToken = 0;
 
 // ── DOM helpers ────────────────────────────────────────────────────────────
 
@@ -63,6 +72,15 @@ function el<T extends HTMLElement = HTMLElement>(id: string): T {
 
 function clear(node: HTMLElement): void {
   while (node.firstChild) node.removeChild(node.firstChild);
+}
+
+function svg<K extends keyof SVGElementTagNameMap>(
+  tag: K,
+  attrs: Record<string, string | number> = {},
+): SVGElementTagNameMap[K] {
+  const node = document.createElementNS(SVG_NS, tag);
+  for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, String(v));
+  return node;
 }
 
 function destroyCharts(): void {
@@ -90,6 +108,11 @@ function colorFor(_label: string, index: number): string {
 function initials(name: string): string {
   const clean = (name || "?").replace(/\.exe$/i, "").trim();
   return (clean[0] ?? "?").toUpperCase();
+}
+
+/** Productive (non-idle, non-locked) segment? */
+function isActive(seg: Segment): boolean {
+  return seg.state !== "idle" && seg.state !== "locked";
 }
 
 // ── Range math ───────────────────────────────────────────────────────────────
@@ -123,11 +146,118 @@ function showOffline(show: boolean): void {
   el("offline-banner").hidden = !show;
 }
 
-// ── Hero (headline total + activity sparkline) ────────────────────────────────
+// ── Live "now tracking" card ───────────────────────────────────────────────
 
-function renderHero(summary: SummaryReport | null, segments: Segment[], range: Range): void {
+/**
+ * Derive the current activity from the most recent timeline segment. The
+ * daemon closes a segment when the app/idle state changes, so the last segment
+ * is "what's happening now" (or what just happened). We show the app, a live
+ * running timer since it started, and whether it's active or idle.
+ */
+function renderNow(segments: Segment[], health: HealthStatus | null): void {
+  const appEl = el("now-app");
+  const timerEl = el("now-timer");
+  const metaEl = el("now-meta");
+  const pulse = el("now-pulse");
+
+  if (nowTimer) {
+    window.clearInterval(nowTimer);
+    nowTimer = 0;
+  }
+
+  if (!health || health.paused) {
+    pulse.dataset.kind = "off";
+    appEl.textContent = health?.paused ? "Paused" : "Offline";
+    timerEl.textContent = "—";
+    metaEl.textContent = health?.paused ? "tracking paused" : "daemon not reachable";
+    return;
+  }
+
+  // The newest segment by start time.
+  const latest = segments.reduce<Segment | null>(
+    (best, s) => (!best || s.startedAt > best.startedAt ? s : best),
+    null,
+  );
+
+  if (!latest) {
+    pulse.dataset.kind = "ok";
+    appEl.textContent = "Idle";
+    timerEl.textContent = "0:00";
+    metaEl.textContent = "no activity yet today";
+    return;
+  }
+
+  const active = isActive(latest);
+  pulse.dataset.kind = active ? "ok" : "idle";
+  appEl.textContent = active ? latest.app || "Unknown" : "Idle";
+  metaEl.textContent = active
+    ? latest.category || "uncategorized"
+    : latest.state;
+
+  // Live timer counting from the current segment's start.
+  const tick = (): void => {
+    const elapsed = Date.now() - latest.startedAt;
+    timerEl.textContent = clockFromMs(elapsed);
+  };
+  tick();
+  nowTimer = window.setInterval(tick, 1000);
+}
+
+/** Format ms as a running clock: `m:ss` under an hour, else `h:mm:ss`. */
+function clockFromMs(ms: number): string {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+// ── Hero (headline total, segmented focus bar, sparkline) ────────────────────
+
+function renderHero(
+  summary: SummaryReport | null,
+  segments: Segment[],
+  range: Range,
+): void {
   el("hero-eyebrow").textContent = presetLabel(activePreset);
   el("hero-total").textContent = summary ? formatDuration(summary.totalMs) : "0m";
+
+  // Segmented bar: active vs idle/locked across the range.
+  let activeMs = 0;
+  let idleMs = 0;
+  for (const seg of segments) {
+    if (isActive(seg)) activeMs += seg.durationMs;
+    else idleMs += seg.durationMs;
+  }
+  const totalMs = activeMs + idleMs;
+  const seg = el("hero-segbar");
+  clear(seg);
+  const legend = el("hero-legend");
+  clear(legend);
+  if (totalMs > 0) {
+    const parts: Array<{ label: string; ms: number; color: string }> = [
+      { label: "Active", ms: activeMs, color: PALETTE[0]! },
+      { label: "Idle", ms: idleMs, color: isDark() ? "#3a4660" : "#cbd5e0" },
+    ];
+    for (const p of parts) {
+      if (p.ms <= 0) continue;
+      const fill = document.createElement("div");
+      fill.className = "segbar-fill";
+      fill.style.width = `${(p.ms / totalMs) * 100}%`;
+      fill.style.background = p.color;
+      fill.title = `${p.label}: ${formatDuration(p.ms)}`;
+      seg.appendChild(fill);
+
+      const lr = document.createElement("span");
+      lr.className = "seg-legend-item";
+      const dot = document.createElement("span");
+      dot.className = "seg-legend-dot";
+      dot.style.background = p.color;
+      lr.append(dot, document.createTextNode(`${p.label} · ${formatDuration(p.ms)}`));
+      legend.appendChild(lr);
+    }
+  }
 
   // Sparkline: active minutes bucketed across the range (24 bars).
   const host = el("hero-sparkline");
@@ -149,7 +279,7 @@ function bucketActiveMinutes(segments: Segment[], range: Range, count: number): 
   const span = Math.max(1, range.to - range.from);
   const bucketMs = span / count;
   for (const seg of segments) {
-    if (seg.state === "idle" || seg.state === "locked") continue;
+    if (!isActive(seg)) continue;
     let s = Math.max(seg.startedAt, range.from);
     const e = Math.min(seg.endedAt, range.to);
     while (s < e) {
@@ -223,6 +353,245 @@ function renderKpis(focus: FocusReport | null, summary: SummaryReport | null): v
     }
     strip.appendChild(node);
   }
+}
+
+// ── Dot-matrix analytics ─────────────────────────────────────────────────────
+
+/**
+ * A dot-matrix column chart: one column per bucket (hour of today, or day of a
+ * multi-day range), each column a stack of dots whose count encodes active
+ * time. Dots light up brand-green from the bottom. Hovering a column shows a
+ * tooltip with the bucket label and total. Pure SVG, theme-aware, crisp.
+ */
+function renderMatrix(segments: Segment[], range: Range): void {
+  const host = el("matrix-chart");
+  const meta = el("matrix-meta");
+  clear(host);
+
+  const isToday = activePreset === "today";
+  // Today → 24 hourly columns; multi-day → one column per day.
+  const cols = isToday ? 24 : Math.max(1, Math.round((range.to - range.from) / 86_400_000));
+  const colMs = isToday ? 3_600_000 : 86_400_000;
+  const base = isToday ? startOfDay(new Date(range.from)) : range.from;
+
+  const totals = new Array<number>(cols).fill(0); // active ms per column
+  for (const seg of segments) {
+    if (!isActive(seg)) continue;
+    let s = Math.max(seg.startedAt, base);
+    const e = Math.min(seg.endedAt, base + cols * colMs);
+    while (s < e) {
+      const idx = Math.floor((s - base) / colMs);
+      if (idx < 0 || idx >= cols) break;
+      const bucketEnd = base + (idx + 1) * colMs;
+      totals[idx] = (totals[idx] ?? 0) + (Math.min(e, bucketEnd) - s);
+      s = bucketEnd;
+    }
+  }
+
+  // Each dot = a fixed slice of time; column height scales to the busiest one.
+  const ROWS = 12;
+  const peak = Math.max(1, ...totals);
+  const perDot = peak / ROWS;
+  meta.textContent = isToday
+    ? "active time · by hour"
+    : "active time · by day";
+
+  const W = 1000;
+  const H = 280;
+  const padL = 8;
+  const padB = 26;
+  const plotW = W - padL * 2;
+  const plotH = H - padB;
+  const colW = plotW / cols;
+  const dotR = Math.max(2.5, Math.min(5, (colW - 6) / 2));
+  const rowGap = plotH / ROWS;
+
+  const root = svg("svg", {
+    viewBox: `0 0 ${W} ${H}`,
+    class: "matrix-svg",
+    preserveAspectRatio: "none",
+  });
+
+  const litColor = BRAND;
+  const dimColor = isDark() ? "rgba(56,161,105,0.13)" : "rgba(49,130,206,0.12)";
+
+  for (let c = 0; c < cols; c++) {
+    const cx = padL + c * colW + colW / 2;
+    const lit = Math.round(((totals[c] ?? 0) / perDot));
+    for (let r = 0; r < ROWS; r++) {
+      const cy = plotH - r * rowGap - rowGap / 2;
+      const on = r < lit;
+      const dot = svg("circle", {
+        cx: cx.toFixed(1),
+        cy: cy.toFixed(1),
+        r: dotR.toFixed(1),
+        fill: on ? litColor : dimColor,
+      });
+      if (on) dot.setAttribute("opacity", String(0.45 + 0.55 * (r / ROWS)));
+      root.appendChild(dot);
+    }
+
+    // Hover hit-area + tooltip.
+    const label = isToday
+      ? hourLabel(c)
+      : new Date(base + c * colMs).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    const hit = svg("rect", {
+      x: (padL + c * colW).toFixed(1),
+      y: 0,
+      width: colW.toFixed(1),
+      height: plotH.toFixed(1),
+      fill: "transparent",
+      class: "matrix-hit",
+    });
+    const title = svg("title", {});
+    title.textContent = `${label} · ${formatDuration(totals[c] ?? 0)}`;
+    hit.appendChild(title);
+    root.appendChild(hit);
+
+    // X-axis labels (sparse so they don't collide).
+    const showLabel = isToday ? c % 3 === 0 : cols <= 14 || c % Math.ceil(cols / 14) === 0;
+    if (showLabel) {
+      const txt = svg("text", {
+        x: cx.toFixed(1),
+        y: H - 8,
+        "text-anchor": "middle",
+        class: "matrix-axis",
+      });
+      txt.textContent = label;
+      root.appendChild(txt);
+    }
+  }
+
+  host.appendChild(root);
+}
+
+function hourLabel(h: number): string {
+  if (h === 0) return "12a";
+  if (h === 12) return "12p";
+  return h < 12 ? `${h}a` : `${h - 12}p`;
+}
+
+// ── Focus gauge (radial 0..100) ──────────────────────────────────────────────
+
+/**
+ * A single focus score (0..100) distilled from focus metrics: rewards deep
+ * work and active time, penalizes high context-switching. Rendered as a radial
+ * arc gauge.
+ */
+function renderFocusGauge(focus: FocusReport | null): void {
+  const host = el("focus-gauge");
+  const meta = el("focus-meta");
+  clear(host);
+
+  if (!focus || focus.totalActiveMs <= 0) {
+    meta.textContent = "";
+    host.appendChild(emptyHint("Pick Today for a focus score."));
+    return;
+  }
+
+  const score = focusScore(focus);
+  meta.textContent = scoreLabel(score);
+
+  const W = 220;
+  const H = 150;
+  const cx = W / 2;
+  const cy = H - 16;
+  const radius = 86;
+  const stroke = 16;
+
+  const root = svg("svg", { viewBox: `0 0 ${W} ${H}`, class: "gauge-svg" });
+  // Track (180° arc, left→right).
+  root.appendChild(
+    svg("path", {
+      d: arcPath(cx, cy, radius, 180, 360),
+      fill: "none",
+      stroke: isDark() ? "#2a3344" : "#e8edf4",
+      "stroke-width": stroke,
+      "stroke-linecap": "round",
+    }),
+  );
+  // Value arc.
+  const endAngle = 180 + (score / 100) * 180;
+  root.appendChild(
+    svg("path", {
+      d: arcPath(cx, cy, radius, 180, endAngle),
+      fill: "none",
+      stroke: scoreColor(score),
+      "stroke-width": stroke,
+      "stroke-linecap": "round",
+    }),
+  );
+  const value = svg("text", {
+    x: cx,
+    y: cy - 14,
+    "text-anchor": "middle",
+    class: "gauge-value",
+  });
+  value.textContent = String(score);
+  const unit = svg("text", { x: cx, y: cy + 6, "text-anchor": "middle", class: "gauge-unit" });
+  unit.textContent = "/ 100 focus";
+  root.append(value, unit);
+  host.appendChild(root);
+
+  // Supporting stat row.
+  const stats = document.createElement("div");
+  stats.className = "gauge-stats";
+  stats.innerHTML = "";
+  const items: Array<[string, string]> = [
+    ["Deep work", formatDuration(focus.longestDeepWorkMs)],
+    ["Switches/hr", focus.switchesPerHour.toFixed(1)],
+  ];
+  for (const [label, val] of items) {
+    const cell = document.createElement("div");
+    cell.className = "gauge-stat";
+    const v = document.createElement("div");
+    v.className = "gauge-stat-val";
+    v.textContent = val;
+    const l = document.createElement("div");
+    l.className = "gauge-stat-label";
+    l.textContent = label;
+    cell.append(v, l);
+    stats.appendChild(cell);
+  }
+  host.appendChild(stats);
+}
+
+/** 0..100 focus score: deep-work and low switching raise it. */
+function focusScore(f: FocusReport): number {
+  const activeHrs = f.totalActiveMs / 3_600_000;
+  // Switching penalty: 0 switches/hr → 1.0, 30+/hr → ~0.
+  const switchFactor = Math.max(0, 1 - f.switchesPerHour / 30);
+  // Deep-work bonus: longest streak relative to a 50-minute "great" session.
+  const deepFactor = Math.min(1, f.longestDeepWorkMs / (50 * 60_000));
+  // Volume nudge so a tiny active window can't score perfectly.
+  const volumeFactor = Math.min(1, activeHrs / 1);
+  const raw = (0.55 * switchFactor + 0.45 * deepFactor) * (0.5 + 0.5 * volumeFactor);
+  return Math.round(Math.max(0, Math.min(1, raw)) * 100);
+}
+
+function scoreColor(score: number): string {
+  if (score >= 70) return "#38a169";
+  if (score >= 40) return "#dd6b20";
+  return "#e53e3e";
+}
+
+function scoreLabel(score: number): string {
+  if (score >= 70) return "deep focus";
+  if (score >= 40) return "steady";
+  return "scattered";
+}
+
+/** SVG arc path between two angles (degrees), clockwise. */
+function arcPath(cx: number, cy: number, r: number, a0: number, a1: number): string {
+  const p0 = polar(cx, cy, r, a0);
+  const p1 = polar(cx, cy, r, a1);
+  const large = a1 - a0 > 180 ? 1 : 0;
+  return `M ${p0.x.toFixed(2)} ${p0.y.toFixed(2)} A ${r} ${r} 0 ${large} 1 ${p1.x.toFixed(2)} ${p1.y.toFixed(2)}`;
+}
+
+function polar(cx: number, cy: number, r: number, angleDeg: number): { x: number; y: number } {
+  const a = (angleDeg * Math.PI) / 180;
+  return { x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) };
 }
 
 // ── By app (real icons) ──────────────────────────────────────────────────────
@@ -435,7 +804,7 @@ function renderTimeline(segments: Segment[], range: Range): void {
   for (let i = 0; i < count; i++) xs[i] = (start + i * bucketMs) / 1000;
 
   for (const seg of segments) {
-    if (seg.state === "idle" || seg.state === "locked") continue;
+    if (!isActive(seg)) continue;
     let s = Math.max(seg.startedAt, start);
     const e = Math.min(seg.endedAt, end);
     while (s < e) {
@@ -483,21 +852,52 @@ function renderTimeline(segments: Segment[], range: Range): void {
   charts.push(chart);
 }
 
-// ── Standup preview ──────────────────────────────────────────────────────────
+// ── AI insights (on-device, with computed fallback) ──────────────────────────
 
-function renderStandup(standup: StandupReport | null): void {
-  const container = el("standup-preview");
-  clear(container);
-  lastStandupMarkdown = standup?.markdown ?? "";
+function renderAiLoading(): void {
+  const host = el("ai-insights");
+  clear(host);
+  const p = document.createElement("p");
+  p.className = "ai-thinking";
+  p.textContent = "Analyzing your day…";
+  host.appendChild(p);
+}
 
-  if (!standup || !standup.markdown.trim()) {
-    container.appendChild(emptyHint("No standup yet — track some time today."));
-    return;
-  }
-  const pre = document.createElement("pre");
-  pre.className = "standup";
-  pre.textContent = standup.markdown;
-  container.appendChild(pre);
+function renderAiResult(text: string, source: "model" | "computed"): void {
+  const host = el("ai-insights");
+  clear(host);
+  el("ai-meta").textContent = source === "model" ? "on-device · Gemini Nano" : "computed";
+  const p = document.createElement("p");
+  p.className = "ai-text";
+  p.textContent = text;
+  host.appendChild(p);
+}
+
+/** Build the compact stats the insight is generated from. */
+function insightFacts(
+  summaryApp: SummaryReport | null,
+  summaryCategory: SummaryReport | null,
+  focus: FocusReport | null,
+): {
+  totalMs: number;
+  topApps: Array<{ name: string; ms: number; share: number }>;
+  topCategories: Array<{ name: string; ms: number; share: number }>;
+  focus: FocusReport | null;
+} {
+  return {
+    totalMs: summaryApp?.totalMs ?? 0,
+    topApps: (summaryApp?.rows ?? []).slice(0, 5).map((r) => ({
+      name: r.key,
+      ms: r.durationMs,
+      share: r.share,
+    })),
+    topCategories: (summaryCategory?.rows ?? []).slice(0, 5).map((r) => ({
+      name: r.key,
+      ms: r.durationMs,
+      share: r.share,
+    })),
+    focus,
+  };
 }
 
 // ── Orchestration ────────────────────────────────────────────────────────────
@@ -505,6 +905,7 @@ function renderStandup(standup: StandupReport | null): void {
 async function refresh(): Promise<void> {
   const range = rangeFor(activePreset);
   destroyCharts();
+  const myAiToken = ++aiToken;
 
   // Health first — drives offline/Wayland states and never blocks reports.
   let health: HealthStatus | null = null;
@@ -515,6 +916,7 @@ async function refresh(): Promise<void> {
       setStatus("Daemon offline", "offline");
       showOffline(true);
       showWaylandNote(false);
+      guard("now", () => renderNow([], null));
       return;
     }
   }
@@ -540,12 +942,19 @@ async function refresh(): Promise<void> {
     activePreset === "today" ? safe(() => client.standup(today)) : Promise.resolve(null),
   ]);
 
+  guard("now", () => renderNow(segments, health));
   guard("hero", () => renderHero(byApp, segments, range));
   guard("kpis", () => renderKpis(focus, byApp));
+  guard("matrix", () => renderMatrix(segments, range));
   guard("apps", () => renderApps(byApp));
   guard("category", () => renderCategoryDonut(byCategory));
+  guard("focus", () => renderFocusGauge(focus));
   guard("timeline", () => renderTimeline(segments, range));
   guard("standup", () => renderStandup(standup));
+
+  // AI insight: fire-and-forget so it never blocks the dashboard. Guarded by
+  // the refresh token so a stale call can't overwrite a newer one.
+  void runAiInsight(myAiToken, byApp, byCategory, focus);
 
   // Project/language need the VS Code extension; render after the core view.
   const [byProject, byLanguage] = await Promise.all([
@@ -554,6 +963,60 @@ async function refresh(): Promise<void> {
   ]);
   guard("projects", () => renderSummaryBars("summary-project", byProject, 6));
   guard("languages", () => renderSummaryBars("summary-language", byLanguage, 6));
+}
+
+async function runAiInsight(
+  token: number,
+  byApp: SummaryReport | null,
+  byCategory: SummaryReport | null,
+  focus: FocusReport | null,
+): Promise<void> {
+  if (token !== aiToken) return;
+  const facts = insightFacts(byApp, byCategory, focus);
+  if (facts.totalMs <= 0) {
+    if (token === aiToken) renderAiResult("No activity tracked yet for this range.", "computed");
+    return;
+  }
+  renderAiLoading();
+  try {
+    const { text, source } = await aiInsight(facts, presetLabel(activePreset));
+    if (token === aiToken) renderAiResult(text, source);
+  } catch {
+    if (token === aiToken) renderAiResult(computedFallback(facts), "computed");
+  }
+}
+
+function renderStandup(standup: StandupReport | null): void {
+  const container = el("standup-preview");
+  clear(container);
+  lastStandupMarkdown = standup?.markdown ?? "";
+
+  if (!standup || !standup.markdown.trim()) {
+    container.appendChild(emptyHint("No standup yet — track some time today."));
+    return;
+  }
+  const pre = document.createElement("pre");
+  pre.className = "standup";
+  pre.textContent = standup.markdown;
+  container.appendChild(pre);
+}
+
+/** A deterministic, no-model insight used when on-device AI is unavailable. */
+function computedFallback(facts: ReturnType<typeof insightFacts>): string {
+  const top = facts.topApps[0];
+  const cat = facts.topCategories[0];
+  const parts: string[] = [];
+  parts.push(`You tracked ${formatDuration(facts.totalMs)}.`);
+  if (top) parts.push(`${top.name} led at ${formatPercent(top.share)}.`);
+  if (cat) parts.push(`Most time fell under "${cat.name}".`);
+  if (facts.focus) {
+    parts.push(
+      facts.focus.switchesPerHour > 20
+        ? `Context switching was high (${facts.focus.switchesPerHour.toFixed(0)}/hr) — try longer focus blocks.`
+        : `Your longest deep-work stretch was ${formatDuration(facts.focus.longestDeepWorkMs)}.`,
+    );
+  }
+  return parts.join(" ");
 }
 
 /**
