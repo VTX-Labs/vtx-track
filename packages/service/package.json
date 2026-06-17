@@ -32,10 +32,10 @@
     "@vtx-track/daemon": "workspace:*"
   },
   "devDependencies": {
-    "@types/node": "^25.9.2",
+    "@types/node": "^25.9.3",
     "tsup": "^8.3.5",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.8"
+    "vitest": "^4.1.9"
   },
   "packageManager": "pnpm@10.6.5"
 }

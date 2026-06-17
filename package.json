@@ -24,13 +24,13 @@
     "clean": "pnpm -r exec rimraf dist coverage"
   },
   "devDependencies": {
-    "@types/node": "^25.9.2",
+    "@types/node": "^25.9.3",
     "rimraf": "^6.0.1",
     "tsup": "^8.3.5",
     "tsx": "^4.19.2",
     "typescript": "^6.0.3",
-    "vite": "^6.0.0",
-    "vitest": "^4.1.8"
+    "vite": "^8.0.16",
+    "vitest": "^4.1.9"
   },
   "pnpm": {
     "onlyBuiltDependencies": ["better-sqlite3", "esbuild"]
