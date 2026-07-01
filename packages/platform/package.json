@@ -33,7 +33,7 @@
     "@paymoapp/real-idle": "^1.1.2"
   },
   "devDependencies": {
-    "@types/node": "^25.9.3",
+    "@types/node": "^26.1.0",
     "tsup": "^8.3.5",
     "typescript": "^6.0.3",
     "vitest": "^4.1.9"
