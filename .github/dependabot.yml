@@ -17,6 +17,10 @@ updates:
         update-types: ["version-update:semver-major"]
       - dependency-name: "@paymoapp/*"
         update-types: ["version-update:semver-major"]
+      # TypeScript 7 breaks tsup's dts build (rollup-plugin-dts is incompatible);
+      # hold on TS 6/7 until the toolchain supports it.
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: github-actions
     directory: "/"
