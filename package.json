@@ -24,13 +24,13 @@
     "clean": "pnpm -r exec rimraf dist coverage"
   },
   "devDependencies": {
-    "@types/node": "^26.1.2",
+    "@types/node": "^26.4.0",
     "rimraf": "^6.0.1",
     "tsup": "^8.3.5",
-    "tsx": "^4.23.8",
+    "tsx": "^4.23.12",
     "typescript": "^6.0.3",
-    "vite": "^8.2.0",
-    "vitest": "^4.1.10"
+    "vite": "^8.2.2",
+    "vitest": "^4.1.11"
   },
   "pnpm": {
     "//": "better-sqlite3 is intentionally NOT built here: its install lifecycle gyp-compiles from source (needs a full C/C++ toolchain), which fails on toolchain-less machines (notably Windows CI without MSVC). The root postinstall (scripts/fetch-native.mjs) fetches the prebuilt binary instead, and the daemon self-heals at startup. esbuild ships pure prebuilt binaries and is safe to build.",

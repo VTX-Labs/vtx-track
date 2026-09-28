@@ -29,14 +29,14 @@
   },
   "dependencies": {
     "@vtx-track/protocol": "workspace:*",
-    "@paymoapp/active-window": "^2.1.4",
-    "@paymoapp/real-idle": "^1.1.2"
+    "@paymoapp/active-window": "^2.2.0",
+    "@paymoapp/real-idle": "^1.2.1"
   },
   "devDependencies": {
-    "@types/node": "^26.1.2",
+    "@types/node": "^26.4.0",
     "tsup": "^8.3.5",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.11"
   },
   "packageManager": "pnpm@10.6.5"
 }
