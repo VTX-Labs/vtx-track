@@ -30,7 +30,7 @@
     "tsx": "^4.23.12",
     "typescript": "^6.0.3",
     "vite": "^8.2.2",
-    "vitest": "^4.1.11"
+    "vitest": "^5.0.2"
   },
   "pnpm": {
     "//": "better-sqlite3 is intentionally NOT built here: its install lifecycle gyp-compiles from source (needs a full C/C++ toolchain), which fails on toolchain-less machines (notably Windows CI without MSVC). The root postinstall (scripts/fetch-native.mjs) fetches the prebuilt binary instead, and the daemon self-heals at startup. esbuild ships pure prebuilt binaries and is safe to build.",
