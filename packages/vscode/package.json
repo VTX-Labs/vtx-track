@@ -59,8 +59,8 @@
     "@vtx-track/protocol": "workspace:*"
   },
   "devDependencies": {
-    "@types/node": "^26.4.0",
-    "@types/vscode": "^1.134.0",
+    "@types/node": "^26.6.3",
+    "@types/vscode": "^1.138.0",
     "@vscode/vsce": "^3.9.2",
     "tsup": "^8.3.5",
     "typescript": "^6.0.3",
